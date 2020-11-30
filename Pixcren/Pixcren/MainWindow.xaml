@@ -17,9 +17,10 @@
 
           <GroupBox Header="範囲">
             <StackPanel>
-              <!--<ComboBox Name="MyComboBoxTest" DisplayMemberPath="Value" SelectedValuePath="Key"-->
-              <ComboBox Name="MyComboBoxTest" DisplayMemberPath="RectName" SelectedValuePath="CaptureRectType"
-                        SelectedValue="{Binding Path=RectType}"/>
+              <ComboBox Name="MyComboBoxTest" DisplayMemberPath="Value" SelectedValuePath="Key"
+                        SelectedValue="{Binding Path=Value}"/>
+              <!--<ComboBox Name="MyComboBoxTest" DisplayMemberPath="RectName" SelectedValuePath="CaptureRectType"
+                        SelectedValue="{Binding Path=RectType}"/>-->
               <!--<RadioButton Content="ウィンドウ" IsChecked="True"/>
               <RadioButton Content="全体"/>
               <RadioButton Content="クライアント領域"/>

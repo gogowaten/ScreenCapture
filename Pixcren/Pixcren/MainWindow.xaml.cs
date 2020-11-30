@@ -51,16 +51,25 @@ namespace Pixcren
         {
             public int X;
             public int Y;
+            public override string ToString()
+            {
+                return $"({X}, {Y})";
+            }
         }
 
         [DllImport("user32.dll")]
         private static extern IntPtr GetActiveWindow();
+
+        //ウィンドウ名取得
         [DllImport("user32.dll")]
         private static extern int GetWindowText(IntPtr hWin, StringBuilder lpString, int nMaxCount);
 
-        //手前にあるウィンドウのハンドル取得
+        //最前面ウィンドウのハンドル取得
         [DllImport("user32.dll")]
         private static extern IntPtr GetForegroundWindow();
+        //指定座標にあるウィンドウのハンドル取得
+        [DllImport("user32.dll")]
+        private static extern IntPtr WindowFromPoint(POINT pOINT);
 
         //ウィンドウのRect取得
         [DllImport("user32.dll")]
@@ -169,12 +178,16 @@ namespace Pixcren
         [DllImport("gdi32.dll")]
         private static extern IntPtr SelectObject(IntPtr hdc, IntPtr h);
 
+        //画像転送
         [DllImport("gdi32.dll")]
         private static extern bool BitBlt(IntPtr hdc, int x, int y, int cx, int cy, IntPtr hdcSrc, int x1, int y1, uint rop);
         private const int SRCCOPY = 0x00cc0020;
         private const int SRCINVERT = 0x00660046;
 
-
+        //
+        [DllImport("user32.dll")]
+        private static extern bool PrintWindow(IntPtr hWnd, IntPtr hDC, uint nFlags);
+        private const uint nFrags_PW_CLIENTONLY = 0x00000001;
 
         [DllImport("user32.dll")]
         private static extern bool DeleteDC(IntPtr hdc);
@@ -268,6 +281,10 @@ namespace Pixcren
 
         //各Rect
         private List<MyRectInfo> MyRects;
+        private Dictionary<CaptureRectType, MyRectRect> MyRectRects;
+        private Dictionary<CaptureRectType, string> MyDCRectName;
+        private Dictionary<CaptureRectType, Int32Rect> MyDCRectRect;
+
 
         //タイマー
         private System.Windows.Threading.DispatcherTimer MyTimer;
@@ -287,22 +304,40 @@ namespace Pixcren
 
             this.DataContext = MyAppConfig;
 
-            var neko = Environment.SpecialFolder.Desktop;
-            var uma = Environment.SpecialFolder.DesktopDirectory;
 
             var inu = Enum.Parse(typeof(ImageType), ImageType.png.ToString());
 
 
             //SetCaptureRectType();
-
-            MyRects = new List<MyRectInfo>() { 
-                new MyRectInfo(CaptureRectType.Screen, "全画面"),
-                new MyRectInfo(CaptureRectType.Window, "ウィンドウ"),
-                new MyRectInfo(CaptureRectType.WindowClient, "ウィンドウのクライアント領域"),
-                new MyRectInfo(CaptureRectType.UnderCursor, "カーソル下のコントロール"),
-                new MyRectInfo(CaptureRectType.UnderCursorClient, "カーソル下のクライアント領域"),
+            MyDCRectName = new Dictionary<CaptureRectType, string>
+            {
+                { CaptureRectType.Screen, "全画面" },
+                { CaptureRectType.Window, "ウィンドウ" },
+                { CaptureRectType.WindowClient, "ウィンドウのクライアント領域" },
+                { CaptureRectType.UnderCursor, "カーソル下のコントロール" },
+                { CaptureRectType.UnderCursorClient, "カーソル下のクライアント領域" },
             };
-            MyComboBoxTest.ItemsSource = MyRects;
+            MyComboBoxTest.ItemsSource = MyDCRectName;
+            MyDCRectRect = new Dictionary<CaptureRectType, Int32Rect>();
+
+
+
+            //MyRects = new List<MyRectInfo>() {
+            //    new MyRectInfo(CaptureRectType.Screen, "全画面"),
+            //    new MyRectInfo(CaptureRectType.Window, "ウィンドウ"),
+            //    new MyRectInfo(CaptureRectType.WindowClient, "ウィンドウのクライアント領域"),
+            //    new MyRectInfo(CaptureRectType.UnderCursor, "カーソル下のコントロール"),
+            //    new MyRectInfo(CaptureRectType.UnderCursorClient, "カーソル下のクライアント領域"),
+            //};
+            //MyComboBoxTest.ItemsSource = MyRects;
+
+            //MyRectRects = new Dictionary<CaptureRectType, MyRectRect>();
+            //MyRectRects.Add(CaptureRectType.Screen, new MyRectRect("全画面"));
+            //MyRectRects.Add(CaptureRectType.Window, new MyRectRect("ウィンドウ"));
+            //MyRectRects.Add(CaptureRectType.WindowClient, new MyRectRect("ウィンドウのクライアント領域"));
+            //MyRectRects.Add(CaptureRectType.UnderCursor, new MyRectRect("カーソル下のコントロール"));
+            //MyRectRects.Add(CaptureRectType.UnderCursorClient, new MyRectRect("カーソル下のクライアント領域"));
+            //MyRectRects[CaptureRectType.Screen].Rect = new Rect();
 
             MyComboBoxHotKey.ItemsSource = Enum.GetValues(typeof(Key));
 
@@ -323,7 +358,7 @@ namespace Pixcren
         {
             short keystate = GetAsyncKeyState(vHotKey);
 
-            if((keystate & 1) == 1)
+            if ((keystate & 1) == 1)
             {
                 //カーソル座標取得
                 GetCursorPos(out MyCursorPoint);
@@ -334,25 +369,25 @@ namespace Pixcren
                 //画面全体画像取得
                 MyBitmapScreen = ScreenCapture();
 
-                //RECT取得
+                ////RECT取得
                 SetRect();
 
-                UpdateImage();
+                //UpdateImage();
             }
         }
+
+       
         //ウィンドウのRECTを取得して保持
         private void SetRect()
         {
             //ウィンドウハンドルの取得
-            //ウィンドウ名がついているもの(GetWindowTextの戻り値が0以外)を走査
-            //最前面ウィンドウから開始、Parentへ10回まで辿っていく
-            //見つからなかった場合は最前面ウィンドウ
-
+            //最前面ウィンドウを起点にWindowTextがあるもの(GetWindowTextの戻り値が0以外)をGetParentで10回まで辿る            
+            //見つからなかった場合は最前面ウィンドウのハンドルにする
             IntPtr hForeWnd = GetForegroundWindow();
-            var wText = new StringBuilder(65535);
+            var wndText = new StringBuilder(65535);
             int count = 0;
             IntPtr hWnd = hForeWnd;
-            while (GetWindowText(hWnd, wText, 65535) == 0)
+            while (GetWindowText(hWnd, wndText, 65535) == 0)
             {
                 hWnd = GetParent(hWnd);
                 count++;
@@ -362,11 +397,73 @@ namespace Pixcren
                     break;
                 }
             }
-            //見た目通りのRectを取得
+            //見た目通りのWindowRectを取得
+            RECT myRECT;
             DwmGetWindowAttribute(hWnd,
                                   DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS,
-                                  out MyRects,
+                                  out myRECT,
                                   Marshal.SizeOf(typeof(RECT)));
+            //RECTからクロップ用のInt32Rectを作成、登録
+            MyDCRectRect[CaptureRectType.Window] =
+                MakeCroppRectFromRECT(myRECT, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
+
+
+            //ウィンドウのクライアント領域のRECT
+            POINT myPOINT;
+            ClientToScreen(hWnd, out myPOINT);
+            GetClientRect(hWnd, out myRECT);
+            MyDCRectRect[CaptureRectType.WindowClient] =
+                MakeCroppRectFromClientRECT(myRECT, myPOINT, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
+
+            //カーソル下のコントロールのRECT、WindowTextが無しならGetWindowRect、ありならEXTENDED_FRAMEを使って取得
+            hWnd = WindowFromPoint(MyCursorPoint);
+            wndText = new StringBuilder(65535);
+            if (GetWindowText(hWnd, wndText, 65535) == 0)
+            {
+                GetWindowRect(hWnd, out myRECT);
+                //DwmGetWindowAttribute(hWnd, DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out myRECT, Marshal.SizeOf(typeof(RECT)));
+            }
+            else
+            {
+                //GetWindowRect(hWnd, out myRECT);
+                DwmGetWindowAttribute(hWnd, DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out myRECT, Marshal.SizeOf(typeof(RECT)));
+            }
+            MyDCRectRect[CaptureRectType.UnderCursor] =
+                MakeCroppRectFromRECT(myRECT, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
+
+            //カーソル下のクライアント領域のRECT
+            POINT myPOINT2;
+            ClientToScreen(hWnd, out myPOINT2);
+            GetClientRect(hWnd, out myRECT);
+            MyDCRectRect[CaptureRectType.UnderCursorClient] =
+                MakeCroppRectFromClientRECT(myRECT, myPOINT2, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
+
+            var n1 = new CroppedBitmap(MyBitmapScreen, MyDCRectRect[CaptureRectType.Window]);
+            var n2 = new CroppedBitmap(MyBitmapScreen, MyDCRectRect[CaptureRectType.WindowClient]);
+            var n3 = new CroppedBitmap(MyBitmapScreen, MyDCRectRect[CaptureRectType.UnderCursor]);
+            var n4 = new CroppedBitmap(MyBitmapScreen, MyDCRectRect[CaptureRectType.UnderCursorClient]);
+        }
+        private Int32Rect MakeCroppRectFromClientRECT(RECT cliectRECT, POINT myPOINT, int bmpWidth, int bmpHeight)
+        {
+            int width = cliectRECT.right;
+            if (myPOINT.X + width > bmpWidth)
+            {
+                width = bmpWidth - myPOINT.X;
+            }
+            int height = cliectRECT.bottom;
+            if (myPOINT.Y + height > bmpHeight)
+            {
+                height = bmpHeight - myPOINT.Y;
+            }
+            return new Int32Rect(myPOINT.X, myPOINT.Y, width, height);
+        }
+        private Int32Rect MakeCroppRectFromRECT(RECT myRECT, int bitmapWidth, int bitmapHeight)
+        {
+            int left = myRECT.left < 0 ? 0 : myRECT.left;
+            int top = myRECT.top < 0 ? 0 : myRECT.top;
+            int right = myRECT.right > bitmapWidth ? bitmapWidth : myRECT.right;
+            int bottom = myRECT.bottom > bitmapHeight ? bitmapHeight : myRECT.bottom;
+            return new Int32Rect(left, top, right - left, bottom - top);
         }
         /// <summary>
         /// マウスカーソルの情報をフィールドに格納
@@ -421,14 +518,31 @@ namespace Pixcren
             BitBlt(memDC, 0, 0, width, height, screenDC, 0, 0, SRCCOPY);
             //bitmapオブジェクトからbitmapSource作成
             BitmapSource source =
-                Imaging.CreateBitmapSourceFromHBitmap(hBmp,
-                                                      IntPtr.Zero,
-                                                      Int32Rect.Empty,
-                                                      BitmapSizeOptions.FromEmptyOptions());
+                Imaging.CreateBitmapSourceFromHBitmap(
+                    hBmp,
+                    IntPtr.Zero,
+                    Int32Rect.Empty,
+                    BitmapSizeOptions.FromEmptyOptions());
+
+
+            //PringWindowを使ったキャプチャはWindow7のウィンドウになるし、タイトル文字が透明
+            IntPtr bb = CreateCompatibleBitmap(screenDC, width, height);
+            SelectObject(memDC, bb);
+            //PrintWindow(GetForegroundWindow(), memDC,nFrags_PW_CLIENTONLY);//クライアント領域
+            PrintWindow(GetForegroundWindow(), memDC, 0);//ウィンドウ
+            var bmp = Imaging.CreateBitmapSourceFromHBitmap(bb, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+
+
+
+
             //後片付け
             DeleteObject(hBmp);
             ReleaseDC(IntPtr.Zero, screenDC);
             ReleaseDC(IntPtr.Zero, memDC);
+
+
+
+
 
             //画像
             return source;
@@ -511,7 +625,7 @@ namespace Pixcren
         {
             MyAppConfig.ImageType = ImageType.Jpeg;
             MyAppConfig.DirList.Add("dummy dir");
-            var neko = MyRects;
+            var neko = MyComboBoxTest.SelectedValue;
             //this.DataContext = MyAppConfig;
         }
 
@@ -591,11 +705,14 @@ namespace Pixcren
 
     public class MyRectInfo
     {
-        public Rect Rect { get; set; }
+        private Rect rect;
+
         public CaptureRectType CaptureRectType { get; set; }
+        public Rect Rect { get; set; }
+
         public string RectName { get; set; }
 
-        public MyRectInfo(CaptureRectType type,string name)
+        public MyRectInfo(CaptureRectType type, string name)
         {
             CaptureRectType = type;
             RectName = name;
@@ -603,9 +720,32 @@ namespace Pixcren
     }
 
 
+    public class MyRectRect
+    {
+        public Rect Rect { get; set; }
+        public string RectName { get; set; }
+        public BitmapSource BitmapSource { get; set; }
+        public MyRectRect(string name)
+        {
+            RectName = name;
+            var a = new MyRectCollection();
+            a.Add(CaptureRectType.Screen, new MyRectInfo(CaptureRectType.Screen, ""));
+            var neko = a[CaptureRectType.Screen];
+
+        }
+
+    }
+    public class MyRectCollection : Dictionary<CaptureRectType, MyRectInfo>
+    {
+        public Rect Rect;
+        public void SetRect(Rect rect)
+        {
+
+        }
+    }
     [Serializable]
     public class AppConfig : System.ComponentModel.INotifyPropertyChanged
-    {  
+    {
         public event PropertyChangedEventHandler PropertyChanged;
         private void RaisePropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
         {
@@ -628,7 +768,7 @@ namespace Pixcren
 
 
 
-    
+
 
         public ImageType ImageType
         {
@@ -650,7 +790,7 @@ namespace Pixcren
                 RaisePropertyChanged();
             }
         }
-    
+
 
 
 
@@ -659,12 +799,12 @@ namespace Pixcren
             DirList = new System.Collections.ObjectModel.ObservableCollection<string>();
             JpegQuality = 94;
             IsDrawCursor = true;
-            
+
         }
-     
+
     }
 
-    
+
     public enum ImageType
     {
         png,
