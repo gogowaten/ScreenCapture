@@ -33,7 +33,7 @@ namespace Pixcren
             //ButtonDriveDirC.Click += (s, e) => ExpandAll(new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)));
             ButtonMyDesktop.Click += (s, e) => ExpandAll(new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.Desktop)));
             ButtonDriveDirC.Click += (s, e) => ExpandAll(new DirectoryInfo(@"C:\"));
-
+            ButtonMove.Click += ButtonMove_Click;
 
 
             //ドライブ全部を表示
@@ -54,6 +54,14 @@ namespace Pixcren
 
         }
 
+        private void ButtonMove_Click(object sender, RoutedEventArgs e)
+        {
+            string dir = TextBoxDir.Text;
+            if (System.IO.Directory.Exists(dir))
+            {
+                ExpandAll(new DirectoryInfo(dir));
+            }
+        }
 
         public FolderDialog(Window owner) : this(null, owner)
         {
@@ -246,6 +254,6 @@ namespace Pixcren
             }
         }
 
-      
+
     }
 }

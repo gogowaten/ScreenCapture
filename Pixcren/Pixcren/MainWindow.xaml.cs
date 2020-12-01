@@ -525,12 +525,12 @@ namespace Pixcren
                     BitmapSizeOptions.FromEmptyOptions());
 
 
-            //PringWindowを使ったキャプチャはWindow7のウィンドウになるし、タイトル文字が透明
-            IntPtr bb = CreateCompatibleBitmap(screenDC, width, height);
-            SelectObject(memDC, bb);
-            //PrintWindow(GetForegroundWindow(), memDC,nFrags_PW_CLIENTONLY);//クライアント領域
-            PrintWindow(GetForegroundWindow(), memDC, 0);//ウィンドウ
-            var bmp = Imaging.CreateBitmapSourceFromHBitmap(bb, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+            ////PringWindowを使ったキャプチャはWindow7のウィンドウになるし、タイトル文字が透明
+            //IntPtr bb = CreateCompatibleBitmap(screenDC, width, height);
+            //SelectObject(memDC, bb);
+            ////PrintWindow(GetForegroundWindow(), memDC,nFrags_PW_CLIENTONLY);//クライアント領域
+            //PrintWindow(GetForegroundWindow(), memDC, 0);//ウィンドウ
+            //var bmp = Imaging.CreateBitmapSourceFromHBitmap(bb, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
 
 
 
@@ -635,7 +635,8 @@ namespace Pixcren
         {
             //フォルダ指定あり
             string folderPath;
-            folderPath = (string)ComboBoxSaveDirectory.SelectedValue;
+            //folderPath = (string)ComboBoxSaveDirectory.SelectedValue;
+            folderPath = (string)ComboBoxSaveDirectory.Text;//表示しているテキスト
             FolderDialog dialog = new FolderDialog(folderPath, this);
 
             //フォルダ指定なし

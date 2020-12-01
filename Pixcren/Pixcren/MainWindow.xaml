@@ -40,7 +40,8 @@
               <TextBlock Text="保存場所"/>
               <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryDelete" Content="削除" Click="ButtonSaveDirectoryDelete_Click"/>
               <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryAdd" Content="追加" Click="ButtonSaveDirectoryAdd_Click"/>
-              <ComboBox DockPanel.Dock="Right" Name="ComboBoxSaveDirectory" ItemsSource="{Binding Path=DirList}" SelectedValue="{Binding Path=Dir}"/>              
+              <ComboBox DockPanel.Dock="Right" Name="ComboBoxSaveDirectory" ItemsSource="{Binding Path=DirList}" SelectedValue="{Binding Path=Dir}"
+                        IsEditable="True"/>
             </DockPanel>
             <StackPanel Orientation="Horizontal">
               <TextBlock Text="ファイル名"/>
