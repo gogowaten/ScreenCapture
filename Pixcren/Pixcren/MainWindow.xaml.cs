@@ -264,8 +264,10 @@ namespace Pixcren
 
         #endregion コピペ呪文ここまで^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-        private string AppDir;
+        private string AppDir;//実行ファイルのパス
         private const string APP_CONFIG_FILE_NAME = "config.xml";
+        private BitmapSource MyBitmapScreen;//全画面画像
+
         private AppConfig MyAppConfig;
         private int vHotKey;//ホットキーの仮想キーコード
 
@@ -277,17 +279,20 @@ namespace Pixcren
         private BitmapSource MyBitmapCursorMask;//マスク画像
         private bool IsMaskUse;//マスク画像使用の有無判定用
 
-        private BitmapSource MyBitmapScreen;//全画面画像
 
         //各Rect
-        private List<MyRectInfo> MyRects;
-        private Dictionary<CaptureRectType, MyRectRect> MyRectRects;
+        //private List<MyRectInfo> MyRects;
+        //private Dictionary<CaptureRectType, MyRectRect> MyRectRects;
         private Dictionary<CaptureRectType, string> MyDCRectName;
-        private Dictionary<CaptureRectType, Int32Rect> MyDCRectRect;
+        private Dictionary<CaptureRectType, Int32Rect> MyDictRectRect;
 
 
         //タイマー
         private System.Windows.Threading.DispatcherTimer MyTimer;
+
+        //アプリ情報
+        private const string AppName = "Pixcreen";
+        private string AppVersion;
 
 
         public MainWindow()
@@ -296,6 +301,36 @@ namespace Pixcren
             this.Loaded += MainWindow_Loaded;
             this.Closing += (s, e) => { MyTimer.Stop(); };
 
+            //            カスタム日時形式文字列 | Microsoft Docs
+            //https://docs.microsoft.com/ja-jp/dotnet/standard/base-types/custom-date-and-time-format-strings
+
+            var now = DateTime.Now;
+            var aa = now.ToLongDateString();
+            var bb = now.ToLongTimeString();
+            var cc = now.ToShortDateString();
+            var dd = now.ToString();
+            var ee = "fff";
+            var ff = now.ToString(ee);
+            now = new DateTime(2020, 1, 2, 3, 4, 5, 6);
+            var gg = now.ToString(ee);
+            var hh = now.ToString("F");
+            var ii = now.ToString("FF");
+            var jj = now.ToString("FFF");
+            var kk = now.ToString("f");
+            var ll = now.ToString("ff");
+            var mm = now.ToString("ffantasy");
+            var nn = now.ToString("mmx");
+            var oo = now.ToString("f\\fan\\ta\\s\\y");
+            var pp = now.ToString("HH'_'dd");
+            var str1 = "指定文字列1";
+            var str2 = "指定文字列2";
+            var rr = str1 + now.ToString("HH'_'dd") + str2;
+            var ss = now.ToString("O");
+            var tt = now.ToString("t");
+
+            //実行ファイルのバージョン取得
+            var cl = Environment.GetCommandLineArgs();
+            AppVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(cl[0]).FileVersion;
 
             AppDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             MyAppConfig = new AppConfig();
@@ -317,8 +352,8 @@ namespace Pixcren
                 { CaptureRectType.UnderCursor, "カーソル下のコントロール" },
                 { CaptureRectType.UnderCursorClient, "カーソル下のクライアント領域" },
             };
-            MyComboBoxTest.ItemsSource = MyDCRectName;
-            MyDCRectRect = new Dictionary<CaptureRectType, Int32Rect>();
+            MyComboBoxCaputureRect.ItemsSource = MyDCRectName;
+            MyDictRectRect = new Dictionary<CaptureRectType, Int32Rect>();
 
 
 
@@ -372,14 +407,22 @@ namespace Pixcren
                 ////RECT取得
                 SetRect();
 
+                //保存
+                BitmapSource bitmap = MakeBitmapForSave();
+                string fullPath = MakeFullPath(MyAppConfig.Dir, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
+                SaveBitmap(bitmap, fullPath);
                 //UpdateImage();
             }
         }
 
-       
+
         //ウィンドウのRECTを取得して保持
         private void SetRect()
         {
+            //画面全体RECT
+            MyDictRectRect[CaptureRectType.Screen] = new Int32Rect(0, 0, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
+
+            //ウィンドウRECT
             //ウィンドウハンドルの取得
             //最前面ウィンドウを起点にWindowTextがあるもの(GetWindowTextの戻り値が0以外)をGetParentで10回まで辿る            
             //見つからなかった場合は最前面ウィンドウのハンドルにする
@@ -404,7 +447,7 @@ namespace Pixcren
                                   out myRECT,
                                   Marshal.SizeOf(typeof(RECT)));
             //RECTからクロップ用のInt32Rectを作成、登録
-            MyDCRectRect[CaptureRectType.Window] =
+            MyDictRectRect[CaptureRectType.Window] =
                 MakeCroppRectFromRECT(myRECT, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
 
 
@@ -412,7 +455,7 @@ namespace Pixcren
             POINT myPOINT;
             ClientToScreen(hWnd, out myPOINT);
             GetClientRect(hWnd, out myRECT);
-            MyDCRectRect[CaptureRectType.WindowClient] =
+            MyDictRectRect[CaptureRectType.WindowClient] =
                 MakeCroppRectFromClientRECT(myRECT, myPOINT, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
 
             //カーソル下のコントロールのRECT、WindowTextが無しならGetWindowRect、ありならEXTENDED_FRAMEを使って取得
@@ -428,20 +471,17 @@ namespace Pixcren
                 //GetWindowRect(hWnd, out myRECT);
                 DwmGetWindowAttribute(hWnd, DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out myRECT, Marshal.SizeOf(typeof(RECT)));
             }
-            MyDCRectRect[CaptureRectType.UnderCursor] =
+            MyDictRectRect[CaptureRectType.UnderCursor] =
                 MakeCroppRectFromRECT(myRECT, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
 
             //カーソル下のクライアント領域のRECT
             POINT myPOINT2;
             ClientToScreen(hWnd, out myPOINT2);
             GetClientRect(hWnd, out myRECT);
-            MyDCRectRect[CaptureRectType.UnderCursorClient] =
+            MyDictRectRect[CaptureRectType.UnderCursorClient] =
                 MakeCroppRectFromClientRECT(myRECT, myPOINT2, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
 
-            var n1 = new CroppedBitmap(MyBitmapScreen, MyDCRectRect[CaptureRectType.Window]);
-            var n2 = new CroppedBitmap(MyBitmapScreen, MyDCRectRect[CaptureRectType.WindowClient]);
-            var n3 = new CroppedBitmap(MyBitmapScreen, MyDCRectRect[CaptureRectType.UnderCursor]);
-            var n4 = new CroppedBitmap(MyBitmapScreen, MyDCRectRect[CaptureRectType.UnderCursorClient]);
+          
         }
         private Int32Rect MakeCroppRectFromClientRECT(RECT cliectRECT, POINT myPOINT, int bmpWidth, int bmpHeight)
         {
@@ -560,6 +600,135 @@ namespace Pixcren
         //    MyComboBoxTest.ItemsSource = RectTyeps;
         //}
 
+        //画像の上にカーソル画像を合成
+        //マスクが必要なカーソルの場合
+        private BitmapSource DrawCursorOnBitmapWithMask()
+        {
+            //int width, height, stride;
+            //byte[] pixels;
+            //カーソルマスク画像と合成
+            //マスク画像の2枚は上下に連結された状態なので、上下に分割
+            int maskWidth = MyBitmapCursorMask.PixelWidth;
+            int maskHeight = MyBitmapCursorMask.PixelHeight / 2;
+            //分割
+            var mask1Bitmap = new CroppedBitmap(MyBitmapCursorMask,
+                                          new Int32Rect(0, 0, maskWidth, maskHeight));
+            var mask2Bitmap = new CroppedBitmap(MyBitmapCursorMask,
+                                          new Int32Rect(0, maskHeight, maskWidth, maskHeight));
+            //画素をbyte配列で取得
+            int maskStride = (maskWidth * 32 + 7) / 8;
+            byte[] mask1Pixels = new byte[maskHeight * maskStride];
+            byte[] mask2Pixels = new byte[maskHeight * maskStride];
+            mask1Bitmap.CopyPixels(mask1Pixels, maskStride, 0);
+            mask2Bitmap.CopyPixels(mask2Pixels, maskStride, 0);
+
+            //キャプチャ画像をbyte配列で取得
+            int width = MyBitmapScreen.PixelWidth;
+            int height = MyBitmapScreen.PixelHeight;
+            int stride = (width * 32 + 7) / 8;
+            byte[] pixels = new byte[height * stride];
+            MyBitmapScreen.CopyPixels(pixels, stride, 0);
+
+            //処理範囲の開始点と終了点設定、開始点はカーソルのホットスポットでオフセット
+            int beginX = MyCursorPoint.X - MyCursorHotspotX;
+            int beginY = MyCursorPoint.Y - MyCursorHotspotY;
+            int endX = beginX + maskWidth;
+            int endY = beginY + maskHeight;
+            if (endX > width) endX = width;
+            if (endY > height) endY = height;
+
+            //最初にマスク画像上とAND合成、続けてマスク画像下とXOR
+            int yCount = 0;
+            for (int y = beginY; y < endY; y++)
+            {
+                int xCount = 0;
+                for (int x = beginX; x < endX; x++)
+                {
+                    int p = (y * stride) + (x * 4);
+                    int pp = (yCount * maskStride) + (xCount * 4);
+                    //AND
+                    pixels[p] &= mask1Pixels[pp];
+                    pixels[p + 1] &= mask1Pixels[pp + 1];
+                    pixels[p + 2] &= mask1Pixels[pp + 2];
+                    //XOR
+                    pixels[p] ^= mask2Pixels[pp];
+                    pixels[p + 1] ^= mask2Pixels[pp + 1];
+                    pixels[p + 2] ^= mask2Pixels[pp + 2];
+
+                    xCount++;
+                }
+                yCount++;
+            }
+            return BitmapSource.Create(width,
+                                       height,
+                                       MyBitmapScreen.DpiX,
+                                       MyBitmapScreen.DpiY,
+                                       MyBitmapScreen.Format,
+                                       MyBitmapScreen.Palette,
+                                       pixels,
+                                       stride);
+        }
+
+        private BitmapSource DrawCursorOnBitmap()
+        {
+            //カーソル画像
+            int cWidth = MyBitmapCursor.PixelWidth;
+            int cHeight = MyBitmapCursor.PixelHeight;
+            int maskStride = (cWidth * 32 + 7) / 8;
+            byte[] cursorPixels = new byte[cHeight * maskStride];
+            MyBitmapCursor.CopyPixels(cursorPixels, maskStride, 0);
+
+            //キャプチャ画像
+            int width = MyBitmapScreen.PixelWidth;
+            int height = MyBitmapScreen.PixelHeight;
+            int stride = (width * 32 + 7) / 8;
+            byte[] pixels = new byte[height * stride];
+            MyBitmapScreen.CopyPixels(pixels, stride, 0);
+
+            //処理範囲の開始点と終了点設定
+            int beginX = MyCursorPoint.X - MyCursorHotspotX;
+            int beginY = MyCursorPoint.Y - MyCursorHotspotY;
+            int endX = beginX + cWidth;
+            int endY = beginY + cHeight;
+            if (endX > width) endX = width;
+            if (endY > height) endY = height;
+
+            int yCount = 0;
+            for (int y = beginY; y < endY; y++)
+            {
+                int xCount = 0;
+                for (int x = beginX; x < endX; x++)
+                {
+                    int p = (y * stride) + (x * 4);
+                    int pp = (yCount * maskStride) + (xCount * 4);
+                    //アルファブレンド
+                    //                    効果
+                    //http://www.charatsoft.com/develop/otogema/page/05d3d/effect.html
+                    //求める画素値 = もとの画素値 + ((カーソル画素値 - もとの画素値) * (カーソルのアルファ値 / 255))
+                    double alpha = cursorPixels[pp + 3] / 255.0;
+                    byte r = pixels[p + 2];
+                    byte g = pixels[p + 1];
+                    byte b = pixels[p];
+                    pixels[p + 2] = (byte)(r + ((cursorPixels[pp + 2] - r) * alpha));
+                    pixels[p + 1] = (byte)(g + ((cursorPixels[pp + 1] - g) * alpha));
+                    pixels[p] = (byte)(b + ((cursorPixels[pp] - b) * alpha));
+
+                    xCount++;
+                }
+                yCount++;
+            }
+            return BitmapSource.Create(width,
+                                       height,
+                                       MyBitmapScreen.DpiX,
+                                       MyBitmapScreen.DpiY,
+                                       MyBitmapScreen.Format,
+                                       MyBitmapScreen.Palette,
+                                       pixels,
+                                       stride);
+        }
+
+
+
 
         #region 設定保存と読み込み
         private void MyButtonSaveState_Click(object sender, RoutedEventArgs e)
@@ -623,10 +792,10 @@ namespace Pixcren
 
         private void MyTestButton_Click(object sender, RoutedEventArgs e)
         {
-            MyAppConfig.ImageType = ImageType.Jpeg;
+            MyAppConfig.ImageType = ImageType.jpg;
             MyAppConfig.DirList.Add("dummy dir");
-            var neko = MyComboBoxTest.SelectedValue;
-            //this.DataContext = MyAppConfig;
+            var neko = MyComboBoxCaputureRect.SelectedValue;
+
         }
 
         #region 保存先リスト追加と削除
@@ -697,53 +866,190 @@ namespace Pixcren
         }
         #endregion
 
+        #region 画像保存
 
-
-
-
-    }
-
-
-    public class MyRectInfo
-    {
-        private Rect rect;
-
-        public CaptureRectType CaptureRectType { get; set; }
-        public Rect Rect { get; set; }
-
-        public string RectName { get; set; }
-
-        public MyRectInfo(CaptureRectType type, string name)
+        private BitmapSource MakeBitmapForSave()
         {
-            CaptureRectType = type;
-            RectName = name;
-        }
-    }
+            BitmapSource bitmap = null;
+            if (MyCheckBoxIsDrawCursor.IsChecked == true)
+            {
+                if (IsMaskUse)
+                {
+                    bitmap = DrawCursorOnBitmapWithMask();
+                }
+                else
+                {
+                    bitmap = DrawCursorOnBitmap();
+                }
+            }
+            else { bitmap = MyBitmapScreen; }
 
+            return new CroppedBitmap(bitmap, MyDictRectRect[MyAppConfig.RectType]);
+             
 
-    public class MyRectRect
-    {
-        public Rect Rect { get; set; }
-        public string RectName { get; set; }
-        public BitmapSource BitmapSource { get; set; }
-        public MyRectRect(string name)
-        {
-            RectName = name;
-            var a = new MyRectCollection();
-            a.Add(CaptureRectType.Screen, new MyRectInfo(CaptureRectType.Screen, ""));
-            var neko = a[CaptureRectType.Screen];
+            //var withCursorBitmap = DrawCursorOnBitmap();
+            //var n1 = new CroppedBitmap(withCursorBitmap, MyDCRectRect[CaptureRectType.Window]);
+            //var n2 = new CroppedBitmap(withCursorBitmap, MyDCRectRect[CaptureRectType.WindowClient]);
+            //var n3 = new CroppedBitmap(withCursorBitmap, MyDCRectRect[CaptureRectType.UnderCursor]);
+            //var n4 = new CroppedBitmap(withCursorBitmap, MyDCRectRect[CaptureRectType.UnderCursorClient]);
+            //SaveBitmap(bitmap, MakeStringNowTime());
 
         }
 
-    }
-    public class MyRectCollection : Dictionary<CaptureRectType, MyRectInfo>
-    {
-        public Rect Rect;
-        public void SetRect(Rect rect)
+        private void SaveBitmap(BitmapSource bitmap, string fullPath)
         {
+            //CroppedBitmapで切り抜いた画像でBitmapFrame作成して保存
+            BitmapEncoder encoder = GetEncoder();
+            //メタデータ作成、アプリ名記入
+            BitmapMetadata meta = MakeMetadata();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap, null, meta, null));
+            try
+            {
+                using (var fs = new System.IO.FileStream(
+                    fullPath, System.IO.FileMode.Create, System.IO.FileAccess.Write))
+                {
+                    encoder.Save(fs);
+                }
 
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
+
+        //ファイル名の重複を回避、拡張子の前に"_"を付け足す
+        private string MakeFullPath(string directory, string fileName, string extension)
+        {
+            //var dir = System.IO.Path.Combine(MyAppConfig.Dir, fileName);
+            var dir = System.IO.Path.Combine(directory, fileName);
+            //var ex = "." + MyAppConfig.ImageType.ToString();
+            extension = "." + extension;
+            var fullPath = dir;
+
+            while (System.IO.File.Exists(fullPath + extension))
+            {
+                fullPath += "_";
+            }
+            return fullPath + extension;
+        }
+
+        //メタデータ作成
+        private BitmapMetadata MakeMetadata()
+        {
+            BitmapMetadata data = null;
+            string software = AppName + "_" + AppVersion;
+            switch (ComboBoxSaveFileType.SelectedValue)
+            {
+                case ImageType.png:
+                    data = new BitmapMetadata("png");
+                    data.SetQuery("/tEXt/Software", software);
+                    break;
+                case ImageType.jpg:
+                    data = new BitmapMetadata("jpg");
+                    data.SetQuery("/app1/ifd/{ushort=305}", software);
+                    break;
+                case ImageType.bmp:
+
+                    break;
+                case ImageType.gif:
+                    data = new BitmapMetadata("Gif");
+                    //data.SetQuery("/xmp/xmp:CreatorTool", "Pixtrim2");
+                    //data.SetQuery("/XMP/XMP:CreatorTool", "Pixtrim2");
+                    data.SetQuery("/XMP/XMP:CreatorTool", software);
+                    break;
+                case ImageType.tiff:
+                    data = new BitmapMetadata("tiff");
+                    data.ApplicationName = software;
+                    break;
+                default:
+                    break;
+            }
+
+            return data;
+        }
+
+        //画像ファイル形式によるEncoder取得
+        private BitmapEncoder GetEncoder()
+        {
+            var type = MyAppConfig.ImageType;
+
+            switch (type)
+            {
+                case ImageType.png:
+                    return new PngBitmapEncoder();
+                case ImageType.jpg:
+                    var jpeg = new JpegBitmapEncoder();
+                    jpeg.QualityLevel = MyAppConfig.JpegQuality;
+                    return jpeg;
+                case ImageType.bmp:
+                    return new BmpBitmapEncoder();
+                case ImageType.gif:
+                    return new GifBitmapEncoder();
+                case ImageType.tiff:
+                    return new TiffBitmapEncoder();
+                default:
+                    throw new Exception();
+            }
+        }
+
+        //今の日時をStringで作成
+        private string MakeStringNowTime()
+        {
+            DateTime dt = DateTime.Now;
+            //string str = dt.ToString("yyyyMMdd");            
+            //string str = dt.ToString("yyyyMMdd" + "_" + "HHmmssfff");
+            string str = dt.ToString("yyyyMMdd" + "_" + "HH" + "_" + "mm" + "_" + "ss" + "_" + "fff");
+            return str;
+        }
+        #endregion
+
+
+
+
     }
+
+
+    //public class MyRectInfo
+    //{
+    //    private Rect rect;
+
+    //    public CaptureRectType CaptureRectType { get; set; }
+    //    public Rect Rect { get; set; }
+
+    //    public string RectName { get; set; }
+
+    //    public MyRectInfo(CaptureRectType type, string name)
+    //    {
+    //        CaptureRectType = type;
+    //        RectName = name;
+    //    }
+    //}
+
+
+    //public class MyRectRect
+    //{
+    //    public Rect Rect { get; set; }
+    //    public string RectName { get; set; }
+    //    public BitmapSource BitmapSource { get; set; }
+    //    public MyRectRect(string name)
+    //    {
+    //        RectName = name;
+    //        var a = new MyRectCollection();
+    //        a.Add(CaptureRectType.Screen, new MyRectInfo(CaptureRectType.Screen, ""));
+    //        var neko = a[CaptureRectType.Screen];
+
+    //    }
+
+    //}
+    //public class MyRectCollection : Dictionary<CaptureRectType, MyRectInfo>
+    //{
+    //    public Rect Rect;
+    //    public void SetRect(Rect rect)
+    //    {
+
+    //    }
+    //}
     [Serializable]
     public class AppConfig : System.ComponentModel.INotifyPropertyChanged
     {
@@ -758,6 +1064,8 @@ namespace Pixcren
         //保存先リスト
         public System.Collections.ObjectModel.ObservableCollection<string> DirList { get; set; }
         public string Dir { get; set; }
+        public int DirIndex { get; set; }
+
         public bool? IsDrawCursor { get; set; }//マウスカーソル描画の有無
         public Key HotKeyModifier1 { get; set; }//修飾キー1
         public Key HotKeyModifier2 { get; set; }//修飾キー2
@@ -765,12 +1073,6 @@ namespace Pixcren
 
 
         private ImageType _ImageType;//保存画像形式
-        private CaptureRectType _RectType;//切り出し範囲
-
-
-
-
-
         public ImageType ImageType
         {
             get => _ImageType;
@@ -781,6 +1083,8 @@ namespace Pixcren
                 RaisePropertyChanged();
             }
         }
+
+        private CaptureRectType _RectType;//切り出し範囲
         public CaptureRectType RectType
         {
             get => _RectType;
@@ -810,8 +1114,9 @@ namespace Pixcren
     {
         png,
         bmp,
-        Jpeg,
+        jpg,
         gif,
+        tiff,
 
     }
     public enum CaptureRectType

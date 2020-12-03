@@ -17,18 +17,12 @@
 
           <GroupBox Header="範囲">
             <StackPanel>
-              <ComboBox Name="MyComboBoxTest" DisplayMemberPath="Value" SelectedValuePath="Key"
-                        SelectedValue="{Binding Path=Value}"/>
-              <!--<ComboBox Name="MyComboBoxTest" DisplayMemberPath="RectName" SelectedValuePath="CaptureRectType"
-                        SelectedValue="{Binding Path=RectType}"/>-->
-              <!--<RadioButton Content="ウィンドウ" IsChecked="True"/>
-              <RadioButton Content="全体"/>
-              <RadioButton Content="クライアント領域"/>
-              <RadioButton Content="カーソル下"/>-->
+              <ComboBox Name="MyComboBoxCaputureRect" DisplayMemberPath="Value" SelectedValuePath="Key"
+                        SelectedValue="{Binding Path=RectType}"/>
             </StackPanel>
           </GroupBox>
-          <CheckBox Content="マウスカーソル描画する" IsChecked="{Binding Path=IsDrawCursor}"/>
-          <Button Content="test" Name="MyTestButton" Click="MyTestButton_Click"/>
+          <CheckBox x:Name="MyCheckBoxIsDrawCursor" Content="マウスカーソル描画する" IsChecked="{Binding Path=IsDrawCursor}"/>
+          <Button Content="テストーーーーーーーーーーーー" Name="MyTestButton" Click="MyTestButton_Click"/>
           <Button Content="button"/>
           <StackPanel>
             <StackPanel Orientation="Horizontal">
@@ -40,7 +34,10 @@
               <TextBlock Text="保存場所"/>
               <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryDelete" Content="削除" Click="ButtonSaveDirectoryDelete_Click"/>
               <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryAdd" Content="追加" Click="ButtonSaveDirectoryAdd_Click"/>
-              <ComboBox DockPanel.Dock="Right" Name="ComboBoxSaveDirectory" ItemsSource="{Binding Path=DirList}" SelectedValue="{Binding Path=Dir}"
+              <ComboBox DockPanel.Dock="Right" Name="ComboBoxSaveDirectory" 
+                        ItemsSource="{Binding Path=DirList}"
+                        SelectedValue="{Binding Path=Dir}"
+                        SelectedIndex="{Binding Path=DirIndex}"
                         IsEditable="True"/>
             </DockPanel>
             <StackPanel Orientation="Horizontal">
