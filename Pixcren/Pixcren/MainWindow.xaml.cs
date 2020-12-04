@@ -291,7 +291,7 @@ namespace Pixcren
         private System.Windows.Threading.DispatcherTimer MyTimer;
 
         //アプリ情報
-        private const string AppName = "Pixcreen";
+        private const string AppName = "PixcrenShot";
         private string AppVersion;
 
 
@@ -410,7 +410,16 @@ namespace Pixcren
                 //保存
                 BitmapSource bitmap = MakeBitmapForSave();
                 string fullPath = MakeFullPath(MyAppConfig.Dir, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
-                SaveBitmap(bitmap, fullPath);
+                try
+                {
+                    SaveBitmap(bitmap, fullPath);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"保存できなかった\n{ex}");
+                }
+                
+                
                 //UpdateImage();
             }
         }
@@ -910,11 +919,10 @@ namespace Pixcren
                 {
                     encoder.Save(fs);
                 }
-
             }
-            catch (Exception ex)
-            {
-                throw ex;
+            catch (Exception)
+            {                
+                throw;
             }
         }
 
