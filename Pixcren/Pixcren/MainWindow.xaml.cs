@@ -392,7 +392,7 @@ namespace Pixcren
         private void MyTimer_Tick(object sender, EventArgs e)
         {
             short keystate = GetAsyncKeyState(vHotKey);
-
+           
             if ((keystate & 1) == 1)
             {
                 //カーソル座標取得
@@ -418,8 +418,8 @@ namespace Pixcren
                 {
                     MessageBox.Show($"保存できなかった\n{ex}");
                 }
-                
-                
+
+
                 //UpdateImage();
             }
         }
@@ -490,7 +490,7 @@ namespace Pixcren
             MyDictRectRect[CaptureRectType.UnderCursorClient] =
                 MakeCroppRectFromClientRECT(myRECT, myPOINT2, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
 
-          
+
         }
         private Int32Rect MakeCroppRectFromClientRECT(RECT cliectRECT, POINT myPOINT, int bmpWidth, int bmpHeight)
         {
@@ -894,7 +894,7 @@ namespace Pixcren
             else { bitmap = MyBitmapScreen; }
 
             return new CroppedBitmap(bitmap, MyDictRectRect[MyAppConfig.RectType]);
-             
+
 
             //var withCursorBitmap = DrawCursorOnBitmap();
             //var n1 = new CroppedBitmap(withCursorBitmap, MyDCRectRect[CaptureRectType.Window]);
@@ -921,7 +921,7 @@ namespace Pixcren
                 }
             }
             catch (Exception)
-            {                
+            {
                 throw;
             }
         }
