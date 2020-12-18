@@ -13,10 +13,9 @@
   </Window.Resources>
   <Grid>
     <Grid.RowDefinitions>
-      <!--<RowDefinition  Height="0.25*" MaxHeight="160" MinHeight="160"/>-->
-      <RowDefinition  Height="0.15*" MaxHeight="120" MinHeight="120"/>
+      <RowDefinition Height="100"/>
       <RowDefinition/>
-      <!--<RowDefinition Height="0"/>-->
+      <RowDefinition Height="40"/>
     </Grid.RowDefinitions>
 
     <StackPanel>
@@ -30,13 +29,14 @@
         <Button DockPanel.Dock="Right" Content="移動" Name="ButtonMove" Margin="2,0,0,0"/>
         <TextBox DockPanel.Dock="Right" x:Name="TextBoxDir"/>
       </DockPanel>
-    <StackPanel Orientation="Horizontal" FlowDirection="RightToLeft">
-      <Button Name="ButtonCancel" Content="Cancel" Width="100" Margin="40,10,10,10"/>
-      <Button Name="ButtonOk" Content="Ok" Width="100" Margin="10"/>
-    </StackPanel>
     </StackPanel>
 
     <TreeView Name="Root" Grid.Row="1" BorderThickness="0"/>
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" FlowDirection="RightToLeft">
+      <Button Name="ButtonCancel" Content="Cancel" Width="100" Margin="40,10,10,10"/>
+      <Button Name="ButtonOk" Content="Ok" Width="100" Margin="10"/>
+    </StackPanel>
 
   </Grid>
 </Window>

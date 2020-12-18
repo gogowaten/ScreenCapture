@@ -7,38 +7,60 @@
         xmlns:myCtrl="clr-namespace:ControlLibraryCore20200620;assembly=ControlLibraryCore20200620"
         mc:Ignorable="d"
         Title="MainWindow" Height="350" Width="400">
+  <Window.Resources>
+    <Style TargetType="TextBlock">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="4,0,4,0"/>
+    </Style>
+    <Style TargetType="StackPanel">
+      <Setter Property="Margin" Value="0,4,0,4"/>
+    </Style>
+    <Style TargetType="DockPanel">
+      <Setter Property="Margin" Value="0,4,0,4"/>
+    </Style>
+    
+  </Window.Resources>
+
   <Grid>
     <TabControl>
       <TabItem Header="キャプチャ">
         <StackPanel>
-
+          <StackPanel Orientation="Horizontal">
+          <Button Content="テストーーーーーーーーーーーー" Name="MyTestButton" Click="MyTestButton_Click"/>
           <Button x:Name="MyButtonSaveState" Content="設定保存" Click="MyButtonSaveState_Click"/>
           <Button x:Name="MyButtonLoadState" Content="設定読み込み" Click="MyButtonLoadState_Click"/>
-
-          <GroupBox Header="範囲">
-            <StackPanel>
-              <ComboBox Name="MyComboBoxCaputureRect" DisplayMemberPath="Value" SelectedValuePath="Key"
-                        SelectedValue="{Binding Path=RectType}"/>
-            </StackPanel>
-          </GroupBox>
+          </StackPanel>
+          
           <CheckBox x:Name="MyCheckBoxIsDrawCursor" Content="マウスカーソル描画する" IsChecked="{Binding Path=IsDrawCursor}"/>
-          <Button Content="テストーーーーーーーーーーーー" Name="MyTestButton" Click="MyTestButton_Click"/>
-          <Button Content="button"/>
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="範囲"/>
+            <ComboBox Name="MyComboBoxCaputureRect" DisplayMemberPath="Value" SelectedValuePath="Key"
+                        SelectedValue="{Binding Path=RectType}"/>
+          </StackPanel>
+          
           <StackPanel>
             <StackPanel Orientation="Horizontal">
               <TextBlock Text="画像形式"/>
               <ComboBox Name="ComboBoxSaveFileType" SelectedItem="{Binding Path=ImageType}"/>
               <myCtrl:NumericUpDown MyValue="{Binding Path=JpegQuality}" MyMinValue="1" MyMaxValue="100" MyStringFormat="jpeg画質 = 000"/>
+              <!--<ComboBox Name="ComboBoxImageType" SelectedValuePath="{Binding Path=ImageType2}" DisplayMemberPath="ImageTypeName"/>-->
             </StackPanel>
             <DockPanel>
               <TextBlock Text="保存場所"/>
-              <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryDelete" Content="削除" Click="ButtonSaveDirectoryDelete_Click"/>
               <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryAdd" Content="追加" Click="ButtonSaveDirectoryAdd_Click"/>
+              <Button DockPanel.Dock="Left" x:Name="ButtonSaveDirectoryDelete" Content="削除" Click="ButtonSaveDirectoryDelete_Click"/>
               <ComboBox DockPanel.Dock="Right" Name="ComboBoxSaveDirectory" 
                         ItemsSource="{Binding Path=DirList}"
                         SelectedValue="{Binding Path=Dir}"
                         SelectedIndex="{Binding Path=DirIndex}"
                         IsEditable="True"/>
+            </DockPanel>
+            <DockPanel>
+              <TextBlock Text="前文字"/>
+              <Button x:Name="ButtonAddFrontText" DockPanel.Dock="Right" Content="追加" Click="ButtonAddFrontText_Click"/>
+              <Button DockPanel.Dock="Left" Content="削除"/>
+              <ComboBox Name="MyComboBoxFrontText" IsEditable="True"
+                        ItemsSource="{Binding Path=FrontTextList}" SelectedValue="{Binding Path=FrontText}"/>
             </DockPanel>
             <StackPanel Orientation="Horizontal">
               <TextBlock Text="ファイル名"/>

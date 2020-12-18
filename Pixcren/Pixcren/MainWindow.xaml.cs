@@ -19,6 +19,8 @@ using System.Runtime.InteropServices;//Imagingで使っている
 using System.Windows.Interop;//CreateBitmapSourceFromHBitmapで使っている
 using System.Windows.Threading;//DispatcherTimerで使っている
 using System.ComponentModel;
+using System.Runtime.Serialization;
+using System.Xml;
 
 namespace Pixcren
 {
@@ -301,6 +303,8 @@ namespace Pixcren
             this.Loaded += MainWindow_Loaded;
             this.Closing += (s, e) => { MyTimer.Stop(); };
 
+
+
             //            カスタム日時形式文字列 | Microsoft Docs
             //https://docs.microsoft.com/ja-jp/dotnet/standard/base-types/custom-date-and-time-format-strings
 
@@ -392,7 +396,7 @@ namespace Pixcren
         private void MyTimer_Tick(object sender, EventArgs e)
         {
             short keystate = GetAsyncKeyState(vHotKey);
-           
+
             if ((keystate & 1) == 1)
             {
                 //カーソル座標取得
@@ -409,7 +413,8 @@ namespace Pixcren
 
                 //保存
                 BitmapSource bitmap = MakeBitmapForSave();
-                string fullPath = MakeFullPath(MyAppConfig.Dir, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
+                string fullPath = MakeFullPath(ComboBoxSaveDirectory.Text, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
+                //string fullPath = MakeFullPath(MyAppConfig.Dir, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
                 try
                 {
                     SaveBitmap(bitmap, fullPath);
@@ -742,23 +747,43 @@ namespace Pixcren
         #region 設定保存と読み込み
         private void MyButtonSaveState_Click(object sender, RoutedEventArgs e)
         {
-            if (SaveConfig(AppDir + "\\" + APP_CONFIG_FILE_NAME))
+            if (SaveSetting(AppDir + "\\" + APP_CONFIG_FILE_NAME))
             {
                 MessageBox.Show("保存しました");
             }
             else { MessageBox.Show("保存できなかった"); };
+
         }
 
         //アプリの設定保存
-        private bool SaveConfig(string path)
+        //private bool SaveConfig(string path)
+        //{
+        //    var serializer = new System.Xml.Serialization.XmlSerializer(typeof(AppConfig));
+        //    try
+        //    {
+        //        using (var writer = new System.IO.StreamWriter(path, false, new UTF8Encoding(false)))
+        //        {
+        //            serializer.Serialize(writer, MyAppConfig);
+        //        };
+        //        return true;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show($"保存できなかった\n{ex.Message}");
+        //        return false;
+        //    }
+        //}
+        private bool SaveSetting(string path)
         {
-            var serializer = new System.Xml.Serialization.XmlSerializer(typeof(AppConfig));
+            var serializer = new DataContractSerializer(typeof(AppConfig));
+            var setting = new XmlWriterSettings();
+            setting.Encoding = new UTF8Encoding(false);
+            XmlWriter xw = null;
+
             try
             {
-                using (var writer = new System.IO.StreamWriter(path, false, new UTF8Encoding(false)))
-                {
-                    serializer.Serialize(writer, MyAppConfig);
-                };
+                xw = XmlWriter.Create(path, setting);
+                serializer.WriteObject(xw, MyAppConfig);
                 return true;
             }
             catch (Exception ex)
@@ -766,11 +791,15 @@ namespace Pixcren
                 MessageBox.Show($"保存できなかった\n{ex.Message}");
                 return false;
             }
+            finally
+            {
+                if (xw != null) { xw.Close(); }
+            }
         }
 
         private void MyButtonLoadState_Click(object sender, RoutedEventArgs e)
         {
-            AppConfig config = LoadConfig(AppDir + "\\" + APP_CONFIG_FILE_NAME);
+            AppConfig config = LoadConfig2(AppDir + "\\" + APP_CONFIG_FILE_NAME);
             if (config != null)
             {
                 MyAppConfig = config;
@@ -778,24 +807,43 @@ namespace Pixcren
             }
         }
 
-        //アプリの設定読み込み
-        private AppConfig LoadConfig(string path)
+        ////アプリの設定読み込み
+        //private AppConfig LoadConfig(string path)
+        //{
+        //    var serealizer = new System.Xml.Serialization.XmlSerializer(typeof(AppConfig));
+        //    try
+        //    {
+        //        using var stream = new System.IO.StreamReader(path, new UTF8Encoding(false));
+        //        return (AppConfig)serealizer.Deserialize(stream);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show($"読み込みできなかった\n{ex.Message}");
+        //        return null;
+        //    }
+        //}
+
+        private AppConfig LoadConfig2(string path)
         {
-            var serealizer = new System.Xml.Serialization.XmlSerializer(typeof(AppConfig));
+            var serializer = new DataContractSerializer(typeof(AppConfig));
+            AppConfig config;
+            XmlReader xr = null;
             try
             {
-                using (var stream = new System.IO.StreamReader(path, new UTF8Encoding(false)))
-                {
-                    return (AppConfig)serealizer.Deserialize(stream);
-                }
+                xr = XmlReader.Create(path);
+                config = (AppConfig)serializer.ReadObject(xr);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"読み込みできなかった\n{ex.Message}");
                 return null;
             }
+            finally
+            {
+                if (xr != null) { xr.Close(); }
+            }
+            return config;
         }
-
         #endregion
 
 
@@ -808,6 +856,7 @@ namespace Pixcren
         }
 
         #region 保存先リスト追加と削除
+
         //保存フォルダをリストに追加
         private void ButtonSaveDirectoryAdd_Click(object sender, RoutedEventArgs e)
         {
@@ -825,6 +874,7 @@ namespace Pixcren
             {
                 string path = dialog.GetFullPath();
                 int itemIndex = MyAppConfig.DirList.IndexOf(path);
+
                 //リストにないパスの場合は普通に追加
                 if (itemIndex == -1)
                 {
@@ -835,13 +885,13 @@ namespace Pixcren
                 else
                 {
                     //リストのコピーを作って、そこから順に元リストに入れていく
-                    var list = MyAppConfig.DirList.ToList();
-                    MyAppConfig.DirList[0] = list[itemIndex];//先頭
-                    list.RemoveAt(itemIndex);
+                    List<string> tempList = MyAppConfig.DirList.ToList();
+                    MyAppConfig.DirList[0] = tempList[itemIndex];//先頭
+                    tempList.RemoveAt(itemIndex);
                     //先頭以外を順に
-                    for (int i = 0; i < list.Count; i++)
+                    for (int i = 0; i < tempList.Count; i++)
                     {
-                        MyAppConfig.DirList[i + 1] = list[i];
+                        MyAppConfig.DirList[i + 1] = tempList[i];
                     }
                     ComboBoxSaveDirectory.SelectedIndex = 0;
                 }
@@ -1010,77 +1060,109 @@ namespace Pixcren
             string str = dt.ToString("yyyyMMdd" + "_" + "HH" + "_" + "mm" + "_" + "ss" + "_" + "fff");
             return str;
         }
+
+
+
         #endregion
 
 
+        private void ButtonAddFrontText_Click(object sender, RoutedEventArgs e)
+        {
+            AddTextToComboBox();
+        }
+        private void AddTextToComboBox()
+        {
+            string text = MyComboBoxFrontText.Text;
+            (bool validity, char cc) = CheckFileName(text);
+            //有効なファイル名だった場合
+            if (validity)
+            {
+                //すでにリストにあった場合は、リストの先頭に移動
+                if (MyAppConfig.FrontTextList.Contains(text))
+                {                    
+                    MyAppConfig.FrontTextList.Remove(text);
+                    MyAppConfig.FrontTextList.Insert(0, text);
+                    MyComboBoxFrontText.SelectedIndex = 0;
+                }
+                //新規のTextなら普通に追加
+                else
+                {
+                    MyAppConfig.FrontTextList.Add(text);
+                    MyComboBoxFrontText.SelectedIndex = MyComboBoxFrontText.Items.Count;
+                }
+            }
+            //無効なファイル名だった場合
+            else
+            {
+                MessageBox.Show($"ファイル名に使えない文字 {cc} があるので追加できなかった\n \\ /：* ? \" < > | . は使えない");
+            }
+        }
+
+
+        //文字列チェック、ファイル名に使えない文字があればfalse
+        private (bool, char) CheckFileName(string fileName)
+        {
+            char[] invalid = System.IO.Path.GetInvalidFileNameChars();
+            foreach (var item in invalid)
+            {
+                if (fileName.Contains(item))
+                {
+                    return (false, item);
+                }
+            }
+            return (true, new char());
+        }
+        //文字列チェック、ファイル名に使えない文字を返す
+        private char GetInvalidChar(string fileName)
+        {
+            char c = new char();
+            char[] invalid = System.IO.Path.GetInvalidFileNameChars();
+            foreach (var item in invalid)
+            {
+                if (fileName.Contains(item))
+                {
+                    return item;
+                }
+            }
+            return c;
+        }
 
 
     }
 
 
-    //public class MyRectInfo
-    //{
-    //    private Rect rect;
 
-    //    public CaptureRectType CaptureRectType { get; set; }
-    //    public Rect Rect { get; set; }
-
-    //    public string RectName { get; set; }
-
-    //    public MyRectInfo(CaptureRectType type, string name)
-    //    {
-    //        CaptureRectType = type;
-    //        RectName = name;
-    //    }
-    //}
-
-
-    //public class MyRectRect
-    //{
-    //    public Rect Rect { get; set; }
-    //    public string RectName { get; set; }
-    //    public BitmapSource BitmapSource { get; set; }
-    //    public MyRectRect(string name)
-    //    {
-    //        RectName = name;
-    //        var a = new MyRectCollection();
-    //        a.Add(CaptureRectType.Screen, new MyRectInfo(CaptureRectType.Screen, ""));
-    //        var neko = a[CaptureRectType.Screen];
-
-    //    }
-
-    //}
-    //public class MyRectCollection : Dictionary<CaptureRectType, MyRectInfo>
-    //{
-    //    public Rect Rect;
-    //    public void SetRect(Rect rect)
-    //    {
-
-    //    }
-    //}
-    [Serializable]
-    public class AppConfig : System.ComponentModel.INotifyPropertyChanged
+    [DataContract]
+    public class AppConfig : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void RaisePropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
-        public int JpegQuality { get; set; }//jpeg画質
-        public double Top { get; set; }//アプリ
-        public double Left { get; set; }//アプリ
+        [DataMember] public int JpegQuality { get; set; }//jpeg画質
+        [DataMember] public double Top { get; set; }//アプリ
+        [DataMember] public double Left { get; set; }//アプリ
         //保存先リスト
-        public System.Collections.ObjectModel.ObservableCollection<string> DirList { get; set; }
-        public string Dir { get; set; }
-        public int DirIndex { get; set; }
+        [DataMember] public System.Collections.ObjectModel.ObservableCollection<string> DirList { get; set; }
+        [DataMember] public string Dir { get; set; }
+        [DataMember] public int DirIndex { get; set; }
 
-        public bool? IsDrawCursor { get; set; }//マウスカーソル描画の有無
-        public Key HotKeyModifier1 { get; set; }//修飾キー1
-        public Key HotKeyModifier2 { get; set; }//修飾キー2
-        public Key HotKey { get; set; }//キャプチャーキー
+        //前文字
+        [DataMember] public System.Collections.ObjectModel.ObservableCollection<string> FrontTextList { get; set; }
+        [DataMember] public string FrontText { get; set; }
 
+
+        [DataMember] public bool? IsDrawCursor { get; set; }//マウスカーソル描画の有無
+        [DataMember] public Key HotKeyModifier1 { get; set; }//修飾キー1
+        [DataMember] public Key HotKeyModifier2 { get; set; }//修飾キー2
+        [DataMember] public Key HotKey { get; set; }//キャプチャーキー
+
+
+        public ImageType ImageType2 { get; set; }
 
         private ImageType _ImageType;//保存画像形式
+        [DataMember]
         public ImageType ImageType
         {
             get => _ImageType;
@@ -1112,7 +1194,7 @@ namespace Pixcren
             DirList = new System.Collections.ObjectModel.ObservableCollection<string>();
             JpegQuality = 94;
             IsDrawCursor = true;
-
+            FrontTextList = new System.Collections.ObjectModel.ObservableCollection<string>();
         }
 
     }
