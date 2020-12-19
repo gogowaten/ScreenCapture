@@ -19,6 +19,10 @@ using System.Runtime.InteropServices;//Imagingで使っている
 using System.Windows.Interop;//CreateBitmapSourceFromHBitmapで使っている
 using System.Windows.Threading;//DispatcherTimerで使っている
 using System.ComponentModel;
+using System.Globalization;
+using System.Runtime.Serialization;
+using System.Xml;
+
 
 namespace Pixcren
 {
@@ -28,6 +32,14 @@ namespace Pixcren
     public partial class MainWindow : Window
     {
         #region WindowsAPI^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        //グローバルホットキー登録用
+        private const int WM_HOTKEY = 0x0312;
+        [DllImport("user32.dll")]
+        private static extern int RegisterHotKey(IntPtr hWnd, int id, int modkyey, int vKey);
+        [DllImport("user32.dll")]
+        private static extern int UnregisterHotKey(IntPtr hWnd, int id);
+
+
         //キーの入力取得
         [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(int vKey);
@@ -266,7 +278,7 @@ namespace Pixcren
 
         private string AppDir;//実行ファイルのパス
         private const string APP_CONFIG_FILE_NAME = "config.xml";
-        private BitmapSource MyBitmapScreen;//全画面画像
+        //private BitmapSource MyBitmapScreen;//全画面画像
 
         private AppConfig MyAppConfig;
         private int vHotKey;//ホットキーの仮想キーコード
@@ -287,19 +299,24 @@ namespace Pixcren
         private Dictionary<CaptureRectType, Int32Rect> MyDictRectRect;
 
 
-        //タイマー
-        private System.Windows.Threading.DispatcherTimer MyTimer;
-
         //アプリ情報
-        private const string AppName = "PixcrenShot";
+        private const string AppName = "PixcrenShot山芋";
         private string AppVersion;
+
+        //ホットキーID
+        private const int HOTKEY_ID1 = 0x0001;
+
+        private IntPtr MyWindowHandle;
 
 
         public MainWindow()
         {
             InitializeComponent();
             this.Loaded += MainWindow_Loaded;
-            this.Closing += (s, e) => { MyTimer.Stop(); };
+            this.Closed += MainWindow_Closed;
+            MyInitializeHotKey();
+
+
 
             //            カスタム日時形式文字列 | Microsoft Docs
             //https://docs.microsoft.com/ja-jp/dotnet/standard/base-types/custom-date-and-time-format-strings
@@ -357,82 +374,132 @@ namespace Pixcren
 
 
 
-            //MyRects = new List<MyRectInfo>() {
-            //    new MyRectInfo(CaptureRectType.Screen, "全画面"),
-            //    new MyRectInfo(CaptureRectType.Window, "ウィンドウ"),
-            //    new MyRectInfo(CaptureRectType.WindowClient, "ウィンドウのクライアント領域"),
-            //    new MyRectInfo(CaptureRectType.UnderCursor, "カーソル下のコントロール"),
-            //    new MyRectInfo(CaptureRectType.UnderCursorClient, "カーソル下のクライアント領域"),
-            //};
-            //MyComboBoxTest.ItemsSource = MyRects;
-
-            //MyRectRects = new Dictionary<CaptureRectType, MyRectRect>();
-            //MyRectRects.Add(CaptureRectType.Screen, new MyRectRect("全画面"));
-            //MyRectRects.Add(CaptureRectType.Window, new MyRectRect("ウィンドウ"));
-            //MyRectRects.Add(CaptureRectType.WindowClient, new MyRectRect("ウィンドウのクライアント領域"));
-            //MyRectRects.Add(CaptureRectType.UnderCursor, new MyRectRect("カーソル下のコントロール"));
-            //MyRectRects.Add(CaptureRectType.UnderCursorClient, new MyRectRect("カーソル下のクライアント領域"));
-            //MyRectRects[CaptureRectType.Screen].Rect = new Rect();
 
             MyComboBoxHotKey.ItemsSource = Enum.GetValues(typeof(Key));
 
         }
 
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        private void MainWindow_Closed(object sender, EventArgs e)
         {
-            MyTimer = new DispatcherTimer();
-            MyTimer.Interval = new TimeSpan(0, 0, 0, 0, 100);
-            MyTimer.Tick += MyTimer_Tick;
-            MyTimer.Start();
-
-            MyComboBoxHotKey.SelectionChanged += (s, e) => { vHotKey = KeyInterop.VirtualKeyFromKey(MyAppConfig.HotKey); };
-
+            //ホットキーの登録解除
+            UnregisterHotKey(MyWindowHandle, HOTKEY_ID1);
+            ComponentDispatcher.ThreadPreprocessMessage -= ComponentDispatcher_ThreadPreprocessMessage;
         }
 
-        private void MyTimer_Tick(object sender, EventArgs e)
+        #region ホットキー
+        private void MyInitializeHotKey()
         {
-            short keystate = GetAsyncKeyState(vHotKey);
-           
-            if ((keystate & 1) == 1)
+            MyWindowHandle = new WindowInteropHelper(this).Handle;
+            ComponentDispatcher.ThreadPreprocessMessage += ComponentDispatcher_ThreadPreprocessMessage;
+        }
+
+        //ホットキー動作
+        private void ComponentDispatcher_ThreadPreprocessMessage(ref MSG msg, ref bool handled)
+        {
+            if (msg.message != WM_HOTKEY) return;
+            else if (msg.wParam.ToInt32() == HOTKEY_ID1)
             {
+                string neko = MyComboBoxSaveDirectory.Text;
+                if (neko == null) return;
+                if (System.IO.Directory.Exists(neko) == false)
+                {
+                    MessageBox.Show($"指定されている保存場所は存在しないので保存できない");
+                    return;
+                }
+                //キャプチャ処理
+
                 //カーソル座標取得
                 GetCursorPos(out MyCursorPoint);
 
                 //カーソル画像取得
-                SetCursorInfo();
+                if (MyAppConfig.IsDrawCursor == true)
+                {
+                    SetCursorInfo();
+                }
 
                 //画面全体画像取得
-                MyBitmapScreen = ScreenCapture();
+                var screen = ScreenCapture();
 
-                ////RECT取得
-                SetRect();
+                //RECT取得
+                Int32Rect rect;
+                switch (MyAppConfig.RectType)
+                {
+                    case CaptureRectType.Screen:
+                        rect = new Int32Rect(0, 0, screen.PixelWidth, screen.PixelHeight);
+                        break;
+
+                    case CaptureRectType.Window:
+                        //ウィンドウRECT
+                        //ウィンドウハンドルの取得
+                        IntPtr hWnd = GetParentWindowFromForegroundWindow();
+
+                        //見た目通りのWindowRectを取得
+                        RECT myRECT;
+                        DwmGetWindowAttribute(hWnd,
+                                              DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS,
+                                              out myRECT,
+                                              Marshal.SizeOf(typeof(RECT)));
+                        //RECTからクロップ用のInt32Rectを作成、登録
+                        rect = MakeCroppRectFromRECT(myRECT, screen.PixelWidth, screen.PixelHeight);
+                        break;
+
+                    case CaptureRectType.WindowClient:
+                        //ウィンドウのクライアント領域のRECT
+                        POINT myPOINT;
+                        hWnd = GetParentWindowFromForegroundWindow();
+                        ClientToScreen(hWnd, out myPOINT);
+                        GetClientRect(hWnd, out myRECT);
+                        rect = MakeCroppRectFromClientRECT(myRECT, myPOINT, screen.PixelWidth, screen.PixelHeight);
+                        break;
+
+                    case CaptureRectType.UnderCursor:
+                        //カーソル下のコントロールのRECT、WindowTextが無しならGetWindowRect、ありならEXTENDED_FRAMEを使って取得
+                        hWnd = WindowFromPoint(MyCursorPoint);
+                        var wndText = new StringBuilder(65535);
+                        if (GetWindowText(hWnd, wndText, 65535) == 0)
+                        {
+                            GetWindowRect(hWnd, out myRECT);
+                            //DwmGetWindowAttribute(hWnd, DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out myRECT, Marshal.SizeOf(typeof(RECT)));
+                        }
+                        else
+                        {
+                            //GetWindowRect(hWnd, out myRECT);
+                            DwmGetWindowAttribute(hWnd, DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out myRECT, Marshal.SizeOf(typeof(RECT)));
+                        }
+                        rect = MakeCroppRectFromRECT(myRECT, screen.PixelWidth, screen.PixelHeight);
+                        break;
+
+                    case CaptureRectType.UnderCursorClient:
+                        //カーソル下のクライアント領域のRECT
+                        POINT myPOINT2;
+                        hWnd = WindowFromPoint(MyCursorPoint);
+                        ClientToScreen(hWnd, out myPOINT2);
+                        GetClientRect(hWnd, out myRECT);
+                        rect = MakeCroppRectFromClientRECT(myRECT, myPOINT2, screen.PixelWidth, screen.PixelHeight);
+
+                        break;
+
+                    default:
+                        rect = new Int32Rect(0, 0, screen.PixelWidth, screen.PixelHeight);
+                        break;
+                }
 
                 //保存
-                BitmapSource bitmap = MakeBitmapForSave();
-                string fullPath = MakeFullPath(MyAppConfig.Dir, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
+                BitmapSource bitmap = MakeBitmapForSave(screen, rect);                
+                string fullPath = MakeFullPath(neko, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
                 try
                 {
                     SaveBitmap(bitmap, fullPath);
+                    //MessageBox.Show("保存した");
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show($"保存できなかった\n{ex}");
                 }
-
-
-                //UpdateImage();
             }
         }
-
-
-        //ウィンドウのRECTを取得して保持
-        private void SetRect()
+        private IntPtr GetParentWindowFromForegroundWindow()
         {
-            //画面全体RECT
-            MyDictRectRect[CaptureRectType.Screen] = new Int32Rect(0, 0, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
-
-            //ウィンドウRECT
-            //ウィンドウハンドルの取得
             //最前面ウィンドウを起点にWindowTextがあるもの(GetWindowTextの戻り値が0以外)をGetParentで10回まで辿る            
             //見つからなかった場合は最前面ウィンドウのハンドルにする
             IntPtr hForeWnd = GetForegroundWindow();
@@ -449,49 +516,68 @@ namespace Pixcren
                     break;
                 }
             }
-            //見た目通りのWindowRectを取得
-            RECT myRECT;
-            DwmGetWindowAttribute(hWnd,
-                                  DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS,
-                                  out myRECT,
-                                  Marshal.SizeOf(typeof(RECT)));
-            //RECTからクロップ用のInt32Rectを作成、登録
-            MyDictRectRect[CaptureRectType.Window] =
-                MakeCroppRectFromRECT(myRECT, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
+            return hWnd;
+        }
+        private void ChangeHotKey(Key Key, int hotkeyId)
+        {
+            ChangeHotKey(KeyInterop.VirtualKeyFromKey(Key), hotkeyId);
+        }
+        private void ChangeHotKey(int vKey, int hotkeyId)
+        {
+            //上書きはできないので、古いのを削除してから登録
+            UnregisterHotKey(MyWindowHandle, hotkeyId);
 
-
-            //ウィンドウのクライアント領域のRECT
-            POINT myPOINT;
-            ClientToScreen(hWnd, out myPOINT);
-            GetClientRect(hWnd, out myRECT);
-            MyDictRectRect[CaptureRectType.WindowClient] =
-                MakeCroppRectFromClientRECT(myRECT, myPOINT, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
-
-            //カーソル下のコントロールのRECT、WindowTextが無しならGetWindowRect、ありならEXTENDED_FRAMEを使って取得
-            hWnd = WindowFromPoint(MyCursorPoint);
-            wndText = new StringBuilder(65535);
-            if (GetWindowText(hWnd, wndText, 65535) == 0)
+            int mod = GetModifierKeySum();
+            if (RegisterHotKey(MyWindowHandle, hotkeyId, mod, vKey) == 0)
             {
-                GetWindowRect(hWnd, out myRECT);
-                //DwmGetWindowAttribute(hWnd, DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out myRECT, Marshal.SizeOf(typeof(RECT)));
+                MessageBox.Show("登録に失敗");
+                MyGroupBoxHotKey.BorderBrush = Brushes.Red;
+                //MyGroupBoxHotKey.Header = "無効なホットキー";
             }
             else
             {
-                //GetWindowRect(hWnd, out myRECT);
-                DwmGetWindowAttribute(hWnd, DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out myRECT, Marshal.SizeOf(typeof(RECT)));
+                //MessageBox.Show("登録完了");
+                MyGroupBoxHotKey.BorderBrush = SystemColors.ActiveBorderBrush;
+                //MyGroupBoxHotKey.Header = "ホットキー";
             }
-            MyDictRectRect[CaptureRectType.UnderCursor] =
-                MakeCroppRectFromRECT(myRECT, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
-
-            //カーソル下のクライアント領域のRECT
-            POINT myPOINT2;
-            ClientToScreen(hWnd, out myPOINT2);
-            GetClientRect(hWnd, out myRECT);
-            MyDictRectRect[CaptureRectType.UnderCursorClient] =
-                MakeCroppRectFromClientRECT(myRECT, myPOINT2, MyBitmapScreen.PixelWidth, MyBitmapScreen.PixelHeight);
-
-
         }
+
+        private int GetModifierKeySum()
+        {
+            int mod = 0;
+            if (MyAppConfig.HotkeyAlt) mod += (int)ModifierKeys.Alt;
+            if (MyAppConfig.HotkeyCtrl) mod += (int)ModifierKeys.Control;
+            if (MyAppConfig.HotkeyShift) mod += (int)ModifierKeys.Shift;
+            if (MyAppConfig.HotkeyWin) mod += (int)ModifierKeys.Windows;
+            return mod;
+        }
+
+        #endregion
+
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            //MyTimer = new DispatcherTimer();
+            //MyTimer.Interval = new TimeSpan(0, 0, 0, 0, 100);
+            //MyTimer.Tick += MyTimer_Tick;
+            //MyTimer.Start();
+
+            //MyComboBoxHotKey.SelectionChanged += (s, e) => { vHotKey = KeyInterop.VirtualKeyFromKey(MyAppConfig.HotKey); };
+            MyComboBoxHotKey.SelectionChanged += (s, e) => { ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1); };
+
+            MyCheckAlt.Click += MyCheckModKey_Click;
+            MyCheckCtrl.Click += MyCheckModKey_Click;
+            MyCheckShift.Click += MyCheckModKey_Click;
+            MyCheckWin.Click += MyCheckModKey_Click;
+        }
+
+        private void MyCheckModKey_Click(object sender, RoutedEventArgs e)
+        {
+            ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1);
+        }
+
+
+
         private Int32Rect MakeCroppRectFromClientRECT(RECT cliectRECT, POINT myPOINT, int bmpWidth, int bmpHeight)
         {
             int width = cliectRECT.right;
@@ -609,9 +695,8 @@ namespace Pixcren
         //    MyComboBoxTest.ItemsSource = RectTyeps;
         //}
 
-        //画像の上にカーソル画像を合成
-        //マスクが必要なカーソルの場合
-        private BitmapSource DrawCursorOnBitmapWithMask()
+        //画像の上にカーソル画像を合成(マスクが必要なカーソルの場合)
+        private BitmapSource DrawCursorOnBitmapWithMask(BitmapSource source)
         {
             //int width, height, stride;
             //byte[] pixels;
@@ -632,11 +717,11 @@ namespace Pixcren
             mask2Bitmap.CopyPixels(mask2Pixels, maskStride, 0);
 
             //キャプチャ画像をbyte配列で取得
-            int width = MyBitmapScreen.PixelWidth;
-            int height = MyBitmapScreen.PixelHeight;
+            int width = source.PixelWidth;
+            int height = source.PixelHeight;
             int stride = (width * 32 + 7) / 8;
             byte[] pixels = new byte[height * stride];
-            MyBitmapScreen.CopyPixels(pixels, stride, 0);
+            source.CopyPixels(pixels, stride, 0);
 
             //処理範囲の開始点と終了点設定、開始点はカーソルのホットスポットでオフセット
             int beginX = MyCursorPoint.X - MyCursorHotspotX;
@@ -670,15 +755,16 @@ namespace Pixcren
             }
             return BitmapSource.Create(width,
                                        height,
-                                       MyBitmapScreen.DpiX,
-                                       MyBitmapScreen.DpiY,
-                                       MyBitmapScreen.Format,
-                                       MyBitmapScreen.Palette,
+                                       source.DpiX,
+                                       source.DpiY,
+                                       source.Format,
+                                       source.Palette,
                                        pixels,
                                        stride);
         }
 
-        private BitmapSource DrawCursorOnBitmap()
+        //画像の上にカーソル画像を合成
+        private BitmapSource DrawCursorOnBitmap(BitmapSource source)
         {
             //カーソル画像
             int cWidth = MyBitmapCursor.PixelWidth;
@@ -688,11 +774,11 @@ namespace Pixcren
             MyBitmapCursor.CopyPixels(cursorPixels, maskStride, 0);
 
             //キャプチャ画像
-            int width = MyBitmapScreen.PixelWidth;
-            int height = MyBitmapScreen.PixelHeight;
+            int width = source.PixelWidth;
+            int height = source.PixelHeight;
             int stride = (width * 32 + 7) / 8;
             byte[] pixels = new byte[height * stride];
-            MyBitmapScreen.CopyPixels(pixels, stride, 0);
+            source.CopyPixels(pixels, stride, 0);
 
             //処理範囲の開始点と終了点設定
             int beginX = MyCursorPoint.X - MyCursorHotspotX;
@@ -728,10 +814,10 @@ namespace Pixcren
             }
             return BitmapSource.Create(width,
                                        height,
-                                       MyBitmapScreen.DpiX,
-                                       MyBitmapScreen.DpiY,
-                                       MyBitmapScreen.Format,
-                                       MyBitmapScreen.Palette,
+                                       source.DpiX,
+                                       source.DpiY,
+                                       source.Format,
+                                       source.Palette,
                                        pixels,
                                        stride);
         }
@@ -742,7 +828,7 @@ namespace Pixcren
         #region 設定保存と読み込み
         private void MyButtonSaveState_Click(object sender, RoutedEventArgs e)
         {
-            if (SaveConfig(AppDir + "\\" + APP_CONFIG_FILE_NAME))
+            if (SaveConfig2(AppDir + "\\" + APP_CONFIG_FILE_NAME))
             {
                 MessageBox.Show("保存しました");
             }
@@ -750,15 +836,18 @@ namespace Pixcren
         }
 
         //アプリの設定保存
-        private bool SaveConfig(string path)
+
+        private bool SaveConfig2(string path)
         {
-            var serializer = new System.Xml.Serialization.XmlSerializer(typeof(AppConfig));
+            var serializer = new DataContractSerializer(typeof(AppConfig));
+            XmlWriterSettings settings = new();
+            settings.Encoding = new UTF8Encoding();
             try
             {
-                using (var writer = new System.IO.StreamWriter(path, false, new UTF8Encoding(false)))
+                using (var xw = XmlWriter.Create(path, settings))
                 {
-                    serializer.Serialize(writer, MyAppConfig);
-                };
+                    serializer.WriteObject(xw, MyAppConfig);
+                }
                 return true;
             }
             catch (Exception ex)
@@ -770,7 +859,7 @@ namespace Pixcren
 
         private void MyButtonLoadState_Click(object sender, RoutedEventArgs e)
         {
-            AppConfig config = LoadConfig(AppDir + "\\" + APP_CONFIG_FILE_NAME);
+            AppConfig config = LoadConfig2(AppDir + "\\" + APP_CONFIG_FILE_NAME);
             if (config != null)
             {
                 MyAppConfig = config;
@@ -779,14 +868,15 @@ namespace Pixcren
         }
 
         //アプリの設定読み込み
-        private AppConfig LoadConfig(string path)
+
+        private AppConfig LoadConfig2(string path)
         {
-            var serealizer = new System.Xml.Serialization.XmlSerializer(typeof(AppConfig));
+            var serealizer = new DataContractSerializer(typeof(AppConfig));
             try
             {
-                using (var stream = new System.IO.StreamReader(path, new UTF8Encoding(false)))
+                using (XmlReader xr = XmlReader.Create(path))
                 {
-                    return (AppConfig)serealizer.Deserialize(stream);
+                    return (AppConfig)serealizer.ReadObject(xr);
                 }
             }
             catch (Exception ex)
@@ -812,9 +902,13 @@ namespace Pixcren
         private void ButtonSaveDirectoryAdd_Click(object sender, RoutedEventArgs e)
         {
             //フォルダ指定あり
-            string folderPath;
-            //folderPath = (string)ComboBoxSaveDirectory.SelectedValue;
-            folderPath = (string)ComboBoxSaveDirectory.Text;//表示しているテキスト
+            string folderPath;            
+            folderPath = MyComboBoxSaveDirectory.Text;//表示しているテキスト
+            //if (System.IO.Directory.Exists(folderPath))
+            //{
+            //    AddDir(folderPath);
+            //}
+            
             FolderDialog dialog = new FolderDialog(folderPath, this);
 
             //フォルダ指定なし
@@ -824,36 +918,40 @@ namespace Pixcren
             if (dialog.DialogResult == true)
             {
                 string path = dialog.GetFullPath();
-                int itemIndex = MyAppConfig.DirList.IndexOf(path);
-                //リストにないパスの場合は普通に追加
-                if (itemIndex == -1)
+                AddDir(path);
+            }
+        }
+        private void AddDir(string dir)
+        {
+            int itemIndex = MyAppConfig.DirList.IndexOf(dir);
+            //リストにないパスの場合は普通に追加
+            if (itemIndex == -1)
+            {
+                MyAppConfig.DirList.Add(dir);
+                MyComboBoxSaveDirectory.SelectedIndex = MyAppConfig.DirList.Count - 1;
+            }
+            //リストにあるパスだったら、そのパスをリストの先頭に移動
+            else
+            {
+                //リストのコピーを作って、そこから順に元リストに入れていく
+                var list = MyAppConfig.DirList.ToList();
+                MyAppConfig.DirList[0] = list[itemIndex];//先頭
+                list.RemoveAt(itemIndex);
+                //先頭以外を順に
+                for (int i = 0; i < list.Count; i++)
                 {
-                    MyAppConfig.DirList.Add(path);
-                    ComboBoxSaveDirectory.SelectedIndex = MyAppConfig.DirList.Count - 1;
+                    MyAppConfig.DirList[i + 1] = list[i];
                 }
-                //リストにあるパスだったら、そのパスをリストの先頭に移動
-                else
-                {
-                    //リストのコピーを作って、そこから順に元リストに入れていく
-                    var list = MyAppConfig.DirList.ToList();
-                    MyAppConfig.DirList[0] = list[itemIndex];//先頭
-                    list.RemoveAt(itemIndex);
-                    //先頭以外を順に
-                    for (int i = 0; i < list.Count; i++)
-                    {
-                        MyAppConfig.DirList[i + 1] = list[i];
-                    }
-                    ComboBoxSaveDirectory.SelectedIndex = 0;
-                }
+                MyComboBoxSaveDirectory.SelectedIndex = 0;
             }
         }
 
         //保存フォルダリスト、表示しているアイテム削除
         private void ButtonSaveDirectoryDelete_Click(object sender, RoutedEventArgs e)
         {
-            int item = ComboBoxSaveDirectory.SelectedIndex;
+            int item = MyComboBoxSaveDirectory.SelectedIndex;
             if (item < 0) return;
-            if (MessageBox.Show($"{ComboBoxSaveDirectory.SelectedValue}を\nリストから削除します",
+            if (MessageBox.Show($"{MyComboBoxSaveDirectory.SelectedValue}を\nリストから削除します",
                                 "確認",
                                 MessageBoxButton.OKCancel)
                 == MessageBoxResult.OK)
@@ -864,12 +962,12 @@ namespace Pixcren
                 if (item == MyAppConfig.DirList.Count || MyAppConfig.DirList.Count == 0)
                 {
                     //削除アイテムがリストの最後か最初なら、Index-1
-                    ComboBoxSaveDirectory.SelectedIndex = item - 1;
+                    MyComboBoxSaveDirectory.SelectedIndex = item - 1;
                 }
                 else
                 {
                     //中間だった場合は同じIndexでいい
-                    ComboBoxSaveDirectory.SelectedIndex = item;
+                    MyComboBoxSaveDirectory.SelectedIndex = item;
                 }
             }
         }
@@ -877,31 +975,23 @@ namespace Pixcren
 
         #region 画像保存
 
-        private BitmapSource MakeBitmapForSave()
+        private BitmapSource MakeBitmapForSave(BitmapSource source, Int32Rect rect)
         {
-            BitmapSource bitmap = null;
-            if (MyCheckBoxIsDrawCursor.IsChecked == true)
+            BitmapSource bitmap;
+            if (MyAppConfig.IsDrawCursor == true)
             {
                 if (IsMaskUse)
                 {
-                    bitmap = DrawCursorOnBitmapWithMask();
+                    bitmap = DrawCursorOnBitmapWithMask(source);
                 }
                 else
                 {
-                    bitmap = DrawCursorOnBitmap();
+                    bitmap = DrawCursorOnBitmap(source);
                 }
             }
-            else { bitmap = MyBitmapScreen; }
+            else { bitmap = source; }
 
-            return new CroppedBitmap(bitmap, MyDictRectRect[MyAppConfig.RectType]);
-
-
-            //var withCursorBitmap = DrawCursorOnBitmap();
-            //var n1 = new CroppedBitmap(withCursorBitmap, MyDCRectRect[CaptureRectType.Window]);
-            //var n2 = new CroppedBitmap(withCursorBitmap, MyDCRectRect[CaptureRectType.WindowClient]);
-            //var n3 = new CroppedBitmap(withCursorBitmap, MyDCRectRect[CaptureRectType.UnderCursor]);
-            //var n4 = new CroppedBitmap(withCursorBitmap, MyDCRectRect[CaptureRectType.UnderCursorClient]);
-            //SaveBitmap(bitmap, MakeStringNowTime());
+            return new CroppedBitmap(bitmap, rect);
 
         }
 
@@ -929,9 +1019,7 @@ namespace Pixcren
         //ファイル名の重複を回避、拡張子の前に"_"を付け足す
         private string MakeFullPath(string directory, string fileName, string extension)
         {
-            //var dir = System.IO.Path.Combine(MyAppConfig.Dir, fileName);
             var dir = System.IO.Path.Combine(directory, fileName);
-            //var ex = "." + MyAppConfig.ImageType.ToString();
             extension = "." + extension;
             var fullPath = dir;
 
@@ -1010,12 +1098,52 @@ namespace Pixcren
             string str = dt.ToString("yyyyMMdd" + "_" + "HH" + "_" + "mm" + "_" + "ss" + "_" + "fff");
             return str;
         }
+
+
+
         #endregion
 
 
+        //コンボボックス上でキーを押し下げたとき
+        //入力されたキー文字は無視
+        private void MyComboBoxHotKey_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            e.Handled = true;//キーイベント無視む～し
+        }
+        //コンボボックス上でキーが上げられたとき
+        //修飾キー以外なら、そのキーと同じキーをコンボボックスで選択する
+        //文字は無視
+        private void MyComboBoxHotKey_PreviewKeyUp(object sender, KeyEventArgs e)
+        {
+            var key = e.Key;
+            if ((key == Key.LeftAlt || key == Key.RightAlt ||
+                key == Key.LeftCtrl || key == Key.RightCtrl ||
+                key == Key.LeftShift || key == Key.RightShift ||
+                key == Key.LWin || key == Key.RWin) == false)
+            {
+                MyComboBoxHotKey.SelectedValue = key;
+            }
 
-
+            e.Handled = true;
+        }
     }
+
+
+
+
+    //チェックボックスのチェックとboolを変換
+    //public class MyConverterCheckBoxBool : IValueConverter
+    //{
+    //    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    //    {
+
+    //    }
+
+    //    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+    //}
 
 
     //public class MyRectInfo
@@ -1058,7 +1186,7 @@ namespace Pixcren
 
     //    }
     //}
-    [Serializable]
+    [DataContract]
     public class AppConfig : System.ComponentModel.INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -1066,21 +1194,30 @@ namespace Pixcren
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
-        public int JpegQuality { get; set; }//jpeg画質
-        public double Top { get; set; }//アプリ
-        public double Left { get; set; }//アプリ
-        //保存先リスト
-        public System.Collections.ObjectModel.ObservableCollection<string> DirList { get; set; }
-        public string Dir { get; set; }
-        public int DirIndex { get; set; }
 
-        public bool? IsDrawCursor { get; set; }//マウスカーソル描画の有無
-        public Key HotKeyModifier1 { get; set; }//修飾キー1
-        public Key HotKeyModifier2 { get; set; }//修飾キー2
-        public Key HotKey { get; set; }//キャプチャーキー
+        [DataMember]
+        public int JpegQuality { get; set; }//jpeg画質
+        [DataMember] public double Top { get; set; }//アプリ
+        [DataMember] public double Left { get; set; }//アプリ
+        //保存先リスト
+        [DataMember] public System.Collections.ObjectModel.ObservableCollection<string> DirList { get; set; }
+        [DataMember] public string Dir { get; set; }
+        [DataMember] public int DirIndex { get; set; }
+
+        [DataMember] public bool? IsDrawCursor { get; set; }//マウスカーソル描画の有無
+
+        //ホットキー
+        //public Key HotKeyModifier1 { get; set; }//修飾キー1
+        //public Key HotKeyModifier2 { get; set; }//修飾キー2
+        [DataMember] public bool HotkeyAlt { get; set; }
+        [DataMember] public bool HotkeyCtrl { get; set; }
+        [DataMember] public bool HotkeyShift { get; set; }
+        [DataMember] public bool HotkeyWin { get; set; }
+        [DataMember] public Key HotKey { get; set; }//キャプチャーキー
 
 
         private ImageType _ImageType;//保存画像形式
+        [DataMember]
         public ImageType ImageType
         {
             get => _ImageType;
@@ -1093,6 +1230,7 @@ namespace Pixcren
         }
 
         private CaptureRectType _RectType;//切り出し範囲
+        [DataMember]
         public CaptureRectType RectType
         {
             get => _RectType;
@@ -1136,5 +1274,6 @@ namespace Pixcren
         UnderCursorClient,
 
     }
+
 
 }

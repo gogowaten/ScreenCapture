@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:Pixcren"
         xmlns:myCtrl="clr-namespace:ControlLibraryCore20200620;assembly=ControlLibraryCore20200620"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="400">
+        Title="MainWindow" Height="350" Width="400" ResizeMode="CanResizeWithGrip">
   <Grid>
     <TabControl>
       <TabItem Header="キャプチャ">
@@ -34,7 +34,7 @@
               <TextBlock Text="保存場所"/>
               <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryDelete" Content="削除" Click="ButtonSaveDirectoryDelete_Click"/>
               <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryAdd" Content="追加" Click="ButtonSaveDirectoryAdd_Click"/>
-              <ComboBox DockPanel.Dock="Right" Name="ComboBoxSaveDirectory" 
+              <ComboBox DockPanel.Dock="Right" Name="MyComboBoxSaveDirectory" 
                         ItemsSource="{Binding Path=DirList}"
                         SelectedValue="{Binding Path=Dir}"
                         SelectedIndex="{Binding Path=DirIndex}"
@@ -44,10 +44,19 @@
               <TextBlock Text="ファイル名"/>
               <TextBox Text="text"/>
             </StackPanel>
-            <DockPanel>
-              <TextBlock Text="ホットキー"/>
-              <ComboBox Name="MyComboBoxHotKey" SelectedValue="{Binding Path=HotKey}"/>
-            </DockPanel>
+            <GroupBox Header="ホットキー" Name="MyGroupBoxHotKey">
+              <DockPanel>
+                <CheckBox Content="Alt" x:Name="MyCheckAlt" IsChecked="{Binding Path=HotkeyAlt}"/>
+                <CheckBox Content="Ctrl" x:Name="MyCheckCtrl" IsChecked="{Binding Path=HotkeyCtrl}"/>
+                <CheckBox Content="Shift" x:Name="MyCheckShift" IsChecked="{Binding Path=HotkeyShift}"/>
+                <CheckBox Content="Win" x:Name="MyCheckWin" IsChecked="{Binding Path=HotkeyWin}"/>
+                <ComboBox Name="MyComboBoxHotKey" IsEditable="True"
+                          SelectedValue="{Binding Path=HotKey}"
+                          PreviewKeyDown="MyComboBoxHotKey_PreviewKeyDown"
+                          PreviewKeyUp="MyComboBoxHotKey_PreviewKeyUp"/>
+                <!--<Button x:Name="MyButtonHotKeyRegist" Content="登録" Click="MyButtonHotKeyRegist_Click"/>-->
+              </DockPanel>
+            </GroupBox>
           </StackPanel>
         </StackPanel>
       </TabItem>
