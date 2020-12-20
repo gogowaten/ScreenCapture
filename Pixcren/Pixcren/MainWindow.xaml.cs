@@ -22,7 +22,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.Serialization;
 using System.Xml;
-
+using System.Collections.ObjectModel;
 
 namespace Pixcren
 {
@@ -485,7 +485,7 @@ namespace Pixcren
                 }
 
                 //保存
-                BitmapSource bitmap = MakeBitmapForSave(screen, rect);                
+                BitmapSource bitmap = MakeBitmapForSave(screen, rect);
                 string fullPath = MakeFullPath(neko, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
                 try
                 {
@@ -891,10 +891,10 @@ namespace Pixcren
 
         private void MyTestButton_Click(object sender, RoutedEventArgs e)
         {
-            MyAppConfig.ImageType = ImageType.jpg;
-            MyAppConfig.DirList.Add("dummy dir");
+            //MyAppConfig.ImageType = ImageType.jpg;
+            //MyAppConfig.DirList.Add("dummy dir");
             var neko = MyComboBoxCaputureRect.SelectedValue;
-
+            var unu = MyRadioButtonFileNameDate.IsChecked;
         }
 
         #region 保存先リスト追加と削除
@@ -902,13 +902,13 @@ namespace Pixcren
         private void ButtonSaveDirectoryAdd_Click(object sender, RoutedEventArgs e)
         {
             //フォルダ指定あり
-            string folderPath;            
+            string folderPath;
             folderPath = MyComboBoxSaveDirectory.Text;//表示しているテキスト
-            //if (System.IO.Directory.Exists(folderPath))
-            //{
-            //    AddDir(folderPath);
-            //}
-            
+                                                      //if (System.IO.Directory.Exists(folderPath))
+                                                      //{
+                                                      //    AddDir(folderPath);
+                                                      //}
+
             FolderDialog dialog = new FolderDialog(folderPath, this);
 
             //フォルダ指定なし
@@ -1099,9 +1099,21 @@ namespace Pixcren
             return str;
         }
 
+        private string MakeFileName()
+        {
+            string fileName = "";
+            if (MyAppConfig.FileNameBaseType == FileNameBaseType.Date)
+            {
+                //fileName = DateTime.Now.ToString(MyAppConfig.da;
+            }
+            else
+            {
 
+            }
+            return fileName;
+        }
 
-        #endregion
+        #endregion 画像保存
 
 
         //コンボボックス上でキーを押し下げたとき
@@ -1131,61 +1143,8 @@ namespace Pixcren
 
 
 
-    //チェックボックスのチェックとboolを変換
-    //public class MyConverterCheckBoxBool : IValueConverter
-    //{
-    //    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    //    {
-
-    //    }
-
-    //    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-    //    {
-    //        throw new NotImplementedException();
-    //    }
-    //}
 
 
-    //public class MyRectInfo
-    //{
-    //    private Rect rect;
-
-    //    public CaptureRectType CaptureRectType { get; set; }
-    //    public Rect Rect { get; set; }
-
-    //    public string RectName { get; set; }
-
-    //    public MyRectInfo(CaptureRectType type, string name)
-    //    {
-    //        CaptureRectType = type;
-    //        RectName = name;
-    //    }
-    //}
-
-
-    //public class MyRectRect
-    //{
-    //    public Rect Rect { get; set; }
-    //    public string RectName { get; set; }
-    //    public BitmapSource BitmapSource { get; set; }
-    //    public MyRectRect(string name)
-    //    {
-    //        RectName = name;
-    //        var a = new MyRectCollection();
-    //        a.Add(CaptureRectType.Screen, new MyRectInfo(CaptureRectType.Screen, ""));
-    //        var neko = a[CaptureRectType.Screen];
-
-    //    }
-
-    //}
-    //public class MyRectCollection : Dictionary<CaptureRectType, MyRectInfo>
-    //{
-    //    public Rect Rect;
-    //    public void SetRect(Rect rect)
-    //    {
-
-    //    }
-    //}
     [DataContract]
     public class AppConfig : System.ComponentModel.INotifyPropertyChanged
     {
@@ -1207,13 +1166,18 @@ namespace Pixcren
         [DataMember] public bool? IsDrawCursor { get; set; }//マウスカーソル描画の有無
 
         //ホットキー
-        //public Key HotKeyModifier1 { get; set; }//修飾キー1
-        //public Key HotKeyModifier2 { get; set; }//修飾キー2
         [DataMember] public bool HotkeyAlt { get; set; }
         [DataMember] public bool HotkeyCtrl { get; set; }
         [DataMember] public bool HotkeyShift { get; set; }
         [DataMember] public bool HotkeyWin { get; set; }
         [DataMember] public Key HotKey { get; set; }//キャプチャーキー
+
+        //ファイルネーム        
+        [DataMember] public FileNameBaseType FileNameBaseType { get; set; }
+        [DataMember] public bool IsFileNamePrefix { get; set; }
+        [DataMember] public string FileNamePrefix { get; set; }
+        [DataMember] public ObservableCollection<string> FileNamePrefixList { get; set; } = new();
+        [DataMember] public bool IsFileNamePrefixConnect { get; set; }
 
 
         private ImageType _ImageType;//保存画像形式
@@ -1275,5 +1239,55 @@ namespace Pixcren
 
     }
 
+    //ラジオボタンとenumのコンバーター
+    public class FileNameBaseConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var paramString = parameter as string;
+            if (paramString == null) { return DependencyProperty.UnsetValue; }
 
+            if (!Enum.IsDefined(value.GetType(), value)) { return Binding.DoNothing; }
+            //if (!Enum.IsDefined(value.GetType(), value)) { return DependencyProperty.UnsetValue; }
+
+            var paramValue = Enum.Parse(value.GetType(), paramString);
+            return paramValue.Equals(value);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var paramString = parameter as string;
+            if (paramString == null) { return DependencyProperty.UnsetValue; }
+
+            if (true.Equals(value)) { return Enum.Parse(targetType, paramString); }
+            else return Binding.DoNothing;
+            //else return DependencyProperty.UnsetValue;//こっちだとラジオボタンに赤枠がつく
+        }
+    }
+    public enum FileNameBaseType
+    {
+        Date,
+        Serial,
+    }
+
+
+    public class StringFormatDigitConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            
+            int digit = decimal.ToInt32((decimal)value);
+            string format = "";
+            for (int i = 0; i < digit; i++)
+            {
+                format += "0";
+            }
+            return format;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

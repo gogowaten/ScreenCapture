@@ -6,7 +6,18 @@
         xmlns:local="clr-namespace:Pixcren"
         xmlns:myCtrl="clr-namespace:ControlLibraryCore20200620;assembly=ControlLibraryCore20200620"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="400" ResizeMode="CanResizeWithGrip">
+        Title="MainWindow" Height="550" Width="400" ResizeMode="CanResizeWithGrip">
+  <Window.Resources>
+    <Style TargetType="CheckBox">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="12,0,5,0"/>
+    </Style>
+    <Style TargetType="RadioButton">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="5,0,15,0"/>
+    </Style>    
+  </Window.Resources>
+  
   <Grid>
     <TabControl>
       <TabItem Header="キャプチャ">
@@ -40,9 +51,66 @@
                         SelectedIndex="{Binding Path=DirIndex}"
                         IsEditable="True"/>
             </DockPanel>
+            
             <StackPanel Orientation="Horizontal">
-              <TextBlock Text="ファイル名"/>
-              <TextBox Text="text"/>
+              <GroupBox Header="ファイル名">
+                <StackPanel>
+                  <StackPanel Orientation="Horizontal">
+                    <CheckBox Content="接頭辞" x:Name="MyCheckBoxFileNamePrefix"
+                              IsChecked="{Binding Path=IsFileNamePrefix}"/>
+                    <ComboBox Name="MyComboBoxFileNamePrefix" IsEditable="True"
+                              ItemsSource="{Binding Path=FileNamePrefixList}"
+                              SelectedValue="{Binding Path=FileNamePrefix}"/>
+                    <Button x:Name="MyButtonAddFileNamePrefix" Content="追加" Tag="{Binding ElementName=MyComboBoxFileNamePrefix}"/>
+                    <Button x:Name="MyButtonDeleteFileNamePrefix" Content="削除" Tag="{Binding ElementName=MyComboBoxFileNamePrefix}"/>
+                    <CheckBox Content="接頭辞接続" x:Name="MyCheckBoxFileNamePrefixConnect"/>
+                    <ComboBox Name="MyComboBoxFileNamePrefixConnect" IsEditable="True"/>
+                  </StackPanel>
+                  <GroupBox Header="数値">
+                    <GroupBox.Resources>
+                      <local:FileNameBaseConverter x:Key="MyFileNameConverter"/>
+                      <local:StringFormatDigitConverter x:Key="MyStringFormatDigitConverter"/>
+                    </GroupBox.Resources>
+                    <StackPanel>
+                      <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="MyRadioButtonFileNameDate" Content="日時" 
+                               IsChecked="{Binding
+                    Path=FileNameBaseType,
+                    Converter={StaticResource MyFileNameConverter},
+                    ConverterParameter=Date}"/>
+                        <ComboBox Name="MyComboBoxFileNameDateFormat" IsEditable="True"/>
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="MyRadioButtonFileNameSerial" Content="連番"
+                               IsChecked="{Binding
+                    Path=FileNameBaseType,
+                    Converter={StaticResource MyFileNameConverter},
+                    ConverterParameter=Serial}"/>
+                        <myCtrl:NumericUpDown Name="MyNumericUpDownFileName"
+                                              MyStringFormat="{Binding 
+                          ElementName=MyNumericUpDownFileNameDigit,
+                          Path=MyValue, Converter={StaticResource MyStringFormatDigitConverter}
+                         }"
+                                              MinWidth="80"/>
+                        <myCtrl:NumericUpDown Name="MyNumericUpDownFileNameDigit" MyStringFormat="桁数：0" Margin="10,0,0,0"
+                                              MinWidth="80" MySmallChange="1" MyLargeChange="1" MyMinValue="1" MyMaxValue="100"/>
+                        <myCtrl:NumericUpDown Name="MyNumericUpDownFileNameIncreace" MyStringFormat="増加値：0;増加値：-0;増加値：0"
+                                              MinWidth="100" MySmallChange="1" MyLargeChange="1" Margin="10,0,0,0"/>
+                      </StackPanel>
+                    </StackPanel>
+                  </GroupBox>
+                  <StackPanel Orientation="Horizontal">
+                    <CheckBox Content="接尾辞接続" x:Name="MyCheckBoxFileNameSuffixConnect"/>
+                    <ComboBox Name="MyComboBoxFileNameSuffixConnect" IsEditable="True"/>
+                    <CheckBox Content="接尾辞" x:Name="MyCheckBoxFileNameSuffix"/>
+                    <ComboBox Name="MyComboBoxFileNameSuffix" IsEditable="True"/>
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="見本"/>
+                    <TextBlock x:Name="MyTextBlockFileNameSmple"/>
+                  </StackPanel>
+                </StackPanel>
+              </GroupBox>
             </StackPanel>
             <GroupBox Header="ホットキー" Name="MyGroupBoxHotKey">
               <DockPanel>
