@@ -895,6 +895,7 @@ namespace Pixcren
             //MyAppConfig.DirList.Add("dummy dir");
             var neko = MyComboBoxCaputureRect.SelectedValue;
             var unu = MyRadioButtonFileNameDate.IsChecked;
+            var tako = MyAppConfig;
         }
 
         #region 保存先リスト追加と削除
@@ -918,34 +919,38 @@ namespace Pixcren
             if (dialog.DialogResult == true)
             {
                 string path = dialog.GetFullPath();
-                AddDir(path);
+                //AddDir(path);
+                AddTextToComboBox(path, MyAppConfig.DirList, MyComboBoxSaveDirectory);
             }
         }
-        private void AddDir(string dir)
+        //ComboBoxのItemsSourceのBinding先のリストにに文字列を追加
+        private void AddTextToComboBox(string text, ObservableCollection<string> stringList, ComboBox combo)
         {
-            int itemIndex = MyAppConfig.DirList.IndexOf(dir);
+            Binding neko = BindingOperations.GetBinding(combo, ComboBox.ItemsSourceProperty);
+            BindingExpression inu = BindingOperations.GetBindingExpression(combo, ItemsControl.ItemsSourceProperty);
+            
+            int itemIndex = stringList.IndexOf(text);
             //リストにないパスの場合は普通に追加
             if (itemIndex == -1)
             {
-                MyAppConfig.DirList.Add(dir);
-                MyComboBoxSaveDirectory.SelectedIndex = MyAppConfig.DirList.Count - 1;
+                stringList.Add(text);
+                combo.SelectedIndex = stringList.Count - 1;
             }
             //リストにあるパスだったら、そのパスをリストの先頭に移動
             else
             {
                 //リストのコピーを作って、そこから順に元リストに入れていく
-                var list = MyAppConfig.DirList.ToList();
-                MyAppConfig.DirList[0] = list[itemIndex];//先頭
+                var list = stringList.ToList();
+                stringList[0] = list[itemIndex];//先頭
                 list.RemoveAt(itemIndex);
                 //先頭以外を順に
                 for (int i = 0; i < list.Count; i++)
                 {
-                    MyAppConfig.DirList[i + 1] = list[i];
+                    stringList[i + 1] = list[i];
                 }
-                MyComboBoxSaveDirectory.SelectedIndex = 0;
+                combo.SelectedIndex = 0;
             }
         }
-
         //保存フォルダリスト、表示しているアイテム削除
         private void ButtonSaveDirectoryDelete_Click(object sender, RoutedEventArgs e)
         {
@@ -1138,6 +1143,15 @@ namespace Pixcren
 
             e.Handled = true;
         }
+
+        private void MyButtonAddFileNamePrefix_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            ComboBox cb = button.Tag as ComboBox;
+            if (cb == null) return;
+            string text = cb.Text;
+            AddTextToComboBox(text, MyAppConfig.FileNamePrefixList, cb);
+        }
     }
 
 
@@ -1174,10 +1188,23 @@ namespace Pixcren
 
         //ファイルネーム        
         [DataMember] public FileNameBaseType FileNameBaseType { get; set; }
+
         [DataMember] public bool IsFileNamePrefix { get; set; }
         [DataMember] public string FileNamePrefix { get; set; }
         [DataMember] public ObservableCollection<string> FileNamePrefixList { get; set; } = new();
+
         [DataMember] public bool IsFileNamePrefixConnect { get; set; }
+        [DataMember] public string FileNamePrefixConnect { get; set; }
+        [DataMember] public ObservableCollection<string> FileNamePrefixConnectList { get; set; } = new();
+
+        [DataMember] public bool IsFileNameSuffix { get; set; }
+        [DataMember] public string FileNameSuffix { get; set; }
+        [DataMember] public ObservableCollection<string> FileNameSuffixList { get; set; } = new();
+
+        [DataMember] public bool IsFileNameSuffixConnect { get; set; }
+        [DataMember] public string FileNameSuffixConnect { get; set; }
+        [DataMember] public ObservableCollection<string> FileNameSuffixConnectList { get; set; } = new();
+
 
 
         private ImageType _ImageType;//保存画像形式
@@ -1275,7 +1302,7 @@ namespace Pixcren
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            
+
             int digit = decimal.ToInt32((decimal)value);
             string format = "";
             for (int i = 0; i < digit; i++)

@@ -61,10 +61,13 @@
                     <ComboBox Name="MyComboBoxFileNamePrefix" IsEditable="True"
                               ItemsSource="{Binding Path=FileNamePrefixList}"
                               SelectedValue="{Binding Path=FileNamePrefix}"/>
-                    <Button x:Name="MyButtonAddFileNamePrefix" Content="追加" Tag="{Binding ElementName=MyComboBoxFileNamePrefix}"/>
+                    <Button x:Name="MyButtonAddFileNamePrefix" Content="追加" Click="MyButtonAddFileNamePrefix_Click" Tag="{Binding ElementName=MyComboBoxFileNamePrefix}"/>
                     <Button x:Name="MyButtonDeleteFileNamePrefix" Content="削除" Tag="{Binding ElementName=MyComboBoxFileNamePrefix}"/>
-                    <CheckBox Content="接頭辞接続" x:Name="MyCheckBoxFileNamePrefixConnect"/>
-                    <ComboBox Name="MyComboBoxFileNamePrefixConnect" IsEditable="True"/>
+                    <CheckBox Content="接頭辞接続" x:Name="MyCheckBoxFileNamePrefixConnect"
+                              IsChecked="{Binding Path=IsFileNamePrefixConnect}"/>
+                    <ComboBox Name="MyComboBoxFileNamePrefixConnect" IsEditable="True"
+                              ItemsSource="{Binding Path=FileNamePrefixConnectList}"
+                              SelectedValue="{Binding Path=FileNamePrefixConnect}"/>
                   </StackPanel>
                   <GroupBox Header="数値">
                     <GroupBox.Resources>
