@@ -316,12 +316,33 @@ namespace Pixcren
             this.Closed += MainWindow_Closed;
             MyInitializeHotKey();
 
+            List<double> vs = new() { 0, 1.5, 2.5, 3.5, 5 };
+            MyComboBoxFileNameDateOrder.ItemsSource = vs;
+            MyComboBoxFileNameSerialOrder.ItemsSource = vs;
+
+
+
+            var now = DateTime.Now;
+
+            //            DateTimeFormatInfo.TimeSeparator プロパティ(System.Globalization) | Microsoft Docs
+            //https://docs.microsoft.com/ja-jp/dotnet/api/system.globalization.datetimeformatinfo.timeseparator?view=net-5.0
+
+            var cul = CultureInfo.CurrentCulture;
+            var dtformat = cul.DateTimeFormat;
+            var dname = cul.DisplayName;
+            var ename = cul.EnglishName;
+            var cname = cul.Name;
+            var tinfo = cul.TextInfo;
+            var culture = CultureInfo.CreateSpecificCulture(cul.Name);
+            var dtfInfo = culture.DateTimeFormat;
+            dtfInfo.TimeSeparator = "_";
+            dtfInfo.DateSeparator = "-";
+            var mySeparate = now.ToString("F", dtfInfo);
+            var mySeparate2 = now.ToString("G", dtfInfo);
 
 
             //            カスタム日時形式文字列 | Microsoft Docs
             //https://docs.microsoft.com/ja-jp/dotnet/standard/base-types/custom-date-and-time-format-strings
-
-            var now = DateTime.Now;
             var aa = now.ToLongDateString();
             var bb = now.ToLongTimeString();
             var cc = now.ToShortDateString();
@@ -355,6 +376,7 @@ namespace Pixcren
             ComboBoxSaveFileType.ItemsSource = Enum.GetValues(typeof(ImageType));
 
             this.DataContext = MyAppConfig;
+            MyTextBlockFileNameSmple.Tag = MyAppConfig;
 
 
             var inu = Enum.Parse(typeof(ImageType), ImageType.png.ToString());
@@ -486,7 +508,8 @@ namespace Pixcren
 
                 //保存
                 BitmapSource bitmap = MakeBitmapForSave(screen, rect);
-                string fullPath = MakeFullPath(neko, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
+                string fullPath = MakeFullPath(neko, MakeFileName(), MyAppConfig.ImageType.ToString());
+                //string fullPath = MakeFullPath(neko, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
                 try
                 {
                     SaveBitmap(bitmap, fullPath);
@@ -894,7 +917,8 @@ namespace Pixcren
             //MyAppConfig.ImageType = ImageType.jpg;
             //MyAppConfig.DirList.Add("dummy dir");
             var neko = MyComboBoxCaputureRect.SelectedValue;
-            var unu = MyRadioButtonFileNameDate.IsChecked;
+            //var unu = MyRadioButtonFileNameDate.IsChecked;
+            var uma = MakeFileName();
             var tako = MyAppConfig;
         }
 
@@ -923,12 +947,14 @@ namespace Pixcren
                 AddTextToComboBox(path, MyAppConfig.DirList, MyComboBoxSaveDirectory);
             }
         }
-        //ComboBoxのItemsSourceのBinding先のリストにに文字列を追加
+
+        //ComboBoxのItemsSourceのBinding先のリストに文字列を追加
         private void AddTextToComboBox(string text, ObservableCollection<string> stringList, ComboBox combo)
         {
-            Binding neko = BindingOperations.GetBinding(combo, ComboBox.ItemsSourceProperty);
-            BindingExpression inu = BindingOperations.GetBindingExpression(combo, ItemsControl.ItemsSourceProperty);
-            
+            if (string.IsNullOrWhiteSpace(text)) return;
+            if (string.IsNullOrEmpty(text)) return;
+
+
             int itemIndex = stringList.IndexOf(text);
             //リストにないパスの場合は普通に追加
             if (itemIndex == -1)
@@ -951,32 +977,40 @@ namespace Pixcren
                 combo.SelectedIndex = 0;
             }
         }
+
         //保存フォルダリスト、表示しているアイテム削除
         private void ButtonSaveDirectoryDelete_Click(object sender, RoutedEventArgs e)
         {
-            int item = MyComboBoxSaveDirectory.SelectedIndex;
-            if (item < 0) return;
-            if (MessageBox.Show($"{MyComboBoxSaveDirectory.SelectedValue}を\nリストから削除します",
+            RemoveComboBoxItem(MyComboBoxSaveDirectory, MyAppConfig.DirList);
+        }
+        private void RemoveComboBoxItem(ComboBox combo, ObservableCollection<string> list)
+        {
+            if (combo.Items.Contains(combo.Text) == false) return;
+            int idx = combo.SelectedIndex;
+            if (idx < 0) return;
+            if (MessageBox.Show($"{combo.SelectedValue}を\nリストから削除します",
                                 "確認",
                                 MessageBoxButton.OKCancel)
                 == MessageBoxResult.OK)
             {
                 //削除
-                MyAppConfig.DirList.RemoveAt(item);
+                list.RemoveAt(idx);
                 //削除後に表示するitem
-                if (item == MyAppConfig.DirList.Count || MyAppConfig.DirList.Count == 0)
+                if (idx == list.Count || list.Count == 0)
                 {
                     //削除アイテムがリストの最後か最初なら、Index-1
-                    MyComboBoxSaveDirectory.SelectedIndex = item - 1;
+                    combo.SelectedIndex = idx - 1;
                 }
                 else
                 {
                     //中間だった場合は同じIndexでいい
-                    MyComboBoxSaveDirectory.SelectedIndex = item;
+                    combo.SelectedIndex = idx;
                 }
             }
         }
+
         #endregion
+
 
         #region 画像保存
 
@@ -1100,25 +1134,85 @@ namespace Pixcren
             DateTime dt = DateTime.Now;
             //string str = dt.ToString("yyyyMMdd");            
             //string str = dt.ToString("yyyyMMdd" + "_" + "HHmmssfff");
-            string str = dt.ToString("yyyyMMdd" + "_" + "HH" + "_" + "mm" + "_" + "ss" + "_" + "fff");
+            string str = dt.ToString("yyyyMMdd'_'HH'_'mm'_'ss'_'fff");
+            //string str = dt.ToString("yyyyMMdd" + "_" + "HH" + "_" + "mm" + "_" + "ss" + "_" + "fff");
             return str;
         }
 
+
         private string MakeFileName()
         {
+            double count = 0.0;
             string fileName = "";
-            if (MyAppConfig.FileNameBaseType == FileNameBaseType.Date)
-            {
-                //fileName = DateTime.Now.ToString(MyAppConfig.da;
-            }
-            else
-            {
+            DateTime dateTime = DateTime.Now;
+            bool isOverDate = false, isOverSerial = false;
+            if (MyAppConfig.IsFileNameDate == false) isOverDate = true;
+            if (MyAppConfig.IsFileNameSerial == false) isOverSerial = true;
+            MyOrder();
 
-            }
+            if (MyAppConfig.IsFileNameText1) MyAddText(MyComboBoxFileNameText1);
+            count += 1.5; MyOrder();
+
+            if (MyAppConfig.IsFileNameText2) MyAddText(MyComboBoxFileNameText2);
+            count++; MyOrder();
+
+            if (MyAppConfig.IsFileNameText3) MyAddText(MyComboBoxFileNameText3);
+            count++; MyOrder();
+
+            if (MyAppConfig.IsFileNameText4) MyAddText(MyComboBoxFileNameText4);
+            count += 1.5; MyOrder();
+
+            if (string.IsNullOrWhiteSpace(fileName)) fileName = MakeStringNowTime();
+            fileName = fileName.TrimStart();
+            fileName = fileName.TrimEnd();
             return fileName;
+
+
+            void MyOrder()
+            {
+                //日時
+                if (isOverDate == false && MyAppConfig.FileNameDateOrder == count)
+                {
+                    var format = MyComboBoxFileNameDateFormat.Text;
+                    if (string.IsNullOrEmpty(format))
+                    {
+                        fileName += MakeStringNowTime();
+                    }
+                    else
+                    {
+                        fileName += dateTime.ToString(MyComboBoxFileNameDateFormat.Text);
+                        isOverDate = true;
+                    }
+                }
+
+                //連番
+                if (isOverSerial == false && MyAppConfig.FileNameSerialOrder == count)
+                {
+                    //fileName += MyNumericUpDownFileNameSerial.MyValue.ToString(MySerialFormat());
+                    fileName += MyAppConfig.FileNameSerial.ToString(MySerialFormat());
+                    MyNumericUpDownFileNameSerial.MyValue += MyAppConfig.FileNameSerialIncreace;
+                    isOverSerial = true;
+                }
+            }
+
+            string MyAddText(ComboBox comboBox)
+            {
+                return fileName += comboBox.Text;
+            }
+            string MySerialFormat()
+            {
+                string str = "";
+                for (int i = 0; i < MyAppConfig.FileNameSerialDigit; i++)
+                {
+                    str += "0";
+                }
+                return str;
+            }
         }
 
         #endregion 画像保存
+
+
 
 
         //コンボボックス上でキーを押し下げたとき
@@ -1144,13 +1238,76 @@ namespace Pixcren
             e.Handled = true;
         }
 
-        private void MyButtonAddFileNamePrefix_Click(object sender, RoutedEventArgs e)
+        private void MyButtonSample_Click(object sender, RoutedEventArgs e)
+        {
+            MyTextBlockFileNameSmple.Text = MakeFileName();
+        }
+
+        private void MyButtonAddFileNameText1_Click(object sender, RoutedEventArgs e)
+        {
+            AddTextToComboBox(sender, MyAppConfig.FileNameText1List);
+        }
+
+        private void MyButtonAddFileNameText2_Click(object sender, RoutedEventArgs e)
+        {
+            AddTextToComboBox(sender, MyAppConfig.FileNameText2List);
+        }
+
+        private void MyButtonAddFileNameText3_Click(object sender, RoutedEventArgs e)
+        {
+            AddTextToComboBox(sender, MyAppConfig.FileNameText3List);
+        }
+
+        private void MyButtonAddFileNameText4_Click(object sender, RoutedEventArgs e)
+        {
+            AddTextToComboBox(sender, MyAppConfig.FileNameText4List);
+        }
+
+        private void AddTextToComboBox(object sender, ObservableCollection<string> list)
         {
             var button = sender as Button;
             ComboBox cb = button.Tag as ComboBox;
-            if (cb == null) return;
-            string text = cb.Text;
-            AddTextToComboBox(text, MyAppConfig.FileNamePrefixList, cb);
+            if (cb != null) AddTextToComboBox(cb.Text, list, cb);
+        }
+
+        private void RemoveComboBoxItem(object sender, ObservableCollection<string> list)
+        {
+            var b = sender as Button;
+            var combo = b.Tag as ComboBox;
+            if (combo != null)
+            {
+                RemoveComboBoxItem(combo, list);
+            }
+        }
+        private void MyButtonRemoveFileNameText1_Click(object sender, RoutedEventArgs e)
+        {
+            RemoveComboBoxItem(sender, MyAppConfig.FileNameText1List);
+        }
+
+        private void MyButtonRemoveFileNameText2_Click(object sender, RoutedEventArgs e)
+        {
+            RemoveComboBoxItem(sender, MyAppConfig.FileNameText2List);
+        }
+
+        private void MyButtonRemoveFileNameText3_Click(object sender, RoutedEventArgs e)
+        {
+            RemoveComboBoxItem(sender, MyAppConfig.FileNameText3List);
+        }
+
+        private void MyButtonRemoveFileNameText4_Click(object sender, RoutedEventArgs e)
+        {
+            RemoveComboBoxItem(sender, MyAppConfig.FileNameText4List);
+        }
+
+
+        private void MyButtonAddFileNameDateFromat_Click(object sender, RoutedEventArgs e)
+        {
+            AddTextToComboBox(sender, MyAppConfig.FileNameDateFormatList);
+        }
+
+        private void MyButtonRemoveFileNameDateFromat_Click(object sender, RoutedEventArgs e)
+        {
+            RemoveComboBoxItem(sender, MyAppConfig.FileNameDateFormatList);
         }
     }
 
@@ -1168,12 +1325,11 @@ namespace Pixcren
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        [DataMember]
-        public int JpegQuality { get; set; }//jpeg画質
+        [DataMember] public int JpegQuality { get; set; }//jpeg画質
         [DataMember] public double Top { get; set; }//アプリ
         [DataMember] public double Left { get; set; }//アプリ
         //保存先リスト
-        [DataMember] public System.Collections.ObjectModel.ObservableCollection<string> DirList { get; set; }
+        [DataMember] public ObservableCollection<string> DirList { get; set; }
         [DataMember] public string Dir { get; set; }
         [DataMember] public int DirIndex { get; set; }
 
@@ -1187,23 +1343,32 @@ namespace Pixcren
         [DataMember] public Key HotKey { get; set; }//キャプチャーキー
 
         //ファイルネーム        
-        [DataMember] public FileNameBaseType FileNameBaseType { get; set; }
+        //[DataMember] public FileNameBaseType FileNameBaseType { get; set; }
+        [DataMember] public bool IsFileNameDate { get; set; }
+        [DataMember] public double FileNameDateOrder { get; set; }
+        [DataMember] public ObservableCollection<string> FileNameDateFormatList { get; set; } = new();
 
-        [DataMember] public bool IsFileNamePrefix { get; set; }
-        [DataMember] public string FileNamePrefix { get; set; }
-        [DataMember] public ObservableCollection<string> FileNamePrefixList { get; set; } = new();
+        [DataMember] public bool IsFileNameSerial { get; set; }
+        [DataMember] public decimal FileNameSerial { get; set; }
+        [DataMember] public double FileNameSerialOrder { get; set; }
+        [DataMember] public decimal FileNameSerialDigit { get; set; }
+        [DataMember] public decimal FileNameSerialIncreace { get; set; }
 
-        [DataMember] public bool IsFileNamePrefixConnect { get; set; }
-        [DataMember] public string FileNamePrefixConnect { get; set; }
-        [DataMember] public ObservableCollection<string> FileNamePrefixConnectList { get; set; } = new();
+        [DataMember] public bool IsFileNameText1 { get; set; }
+        [DataMember] public string FileNameText1 { get; set; }
+        [DataMember] public ObservableCollection<string> FileNameText1List { get; set; } = new();
 
-        [DataMember] public bool IsFileNameSuffix { get; set; }
-        [DataMember] public string FileNameSuffix { get; set; }
-        [DataMember] public ObservableCollection<string> FileNameSuffixList { get; set; } = new();
+        [DataMember] public bool IsFileNameText2 { get; set; }
+        [DataMember] public string FileNameText2 { get; set; }
+        [DataMember] public ObservableCollection<string> FileNameText2List { get; set; } = new();
 
-        [DataMember] public bool IsFileNameSuffixConnect { get; set; }
-        [DataMember] public string FileNameSuffixConnect { get; set; }
-        [DataMember] public ObservableCollection<string> FileNameSuffixConnectList { get; set; } = new();
+        [DataMember] public bool IsFileNameText3 { get; set; }
+        [DataMember] public string FileNameText3 { get; set; }
+        [DataMember] public ObservableCollection<string> FileNameText3List { get; set; } = new();
+
+        [DataMember] public bool IsFileNameText4 { get; set; }
+        [DataMember] public string FileNameText4 { get; set; }
+        [DataMember] public ObservableCollection<string> FileNameText4List { get; set; } = new();
 
 
 
@@ -1238,11 +1403,12 @@ namespace Pixcren
 
         public AppConfig()
         {
-            DirList = new System.Collections.ObjectModel.ObservableCollection<string>();
+            DirList = new ObservableCollection<string>();
             JpegQuality = 94;
             IsDrawCursor = true;
 
         }
+
 
     }
 
@@ -1266,50 +1432,53 @@ namespace Pixcren
 
     }
 
-    //ラジオボタンとenumのコンバーター
-    public class FileNameBaseConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            var paramString = parameter as string;
-            if (paramString == null) { return DependencyProperty.UnsetValue; }
+    ////ラジオボタンとenumのコンバーター
+    //public class FileNameBaseConverter : IValueConverter
+    //{
+    //    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    //    {
+    //        var paramString = parameter as string;
+    //        if (paramString == null) { return DependencyProperty.UnsetValue; }
 
-            if (!Enum.IsDefined(value.GetType(), value)) { return Binding.DoNothing; }
-            //if (!Enum.IsDefined(value.GetType(), value)) { return DependencyProperty.UnsetValue; }
+    //        if (!Enum.IsDefined(value.GetType(), value)) { return Binding.DoNothing; }
+    //        //if (!Enum.IsDefined(value.GetType(), value)) { return DependencyProperty.UnsetValue; }
 
-            var paramValue = Enum.Parse(value.GetType(), paramString);
-            return paramValue.Equals(value);
-        }
+    //        var paramValue = Enum.Parse(value.GetType(), paramString);
+    //        return paramValue.Equals(value);
+    //    }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            var paramString = parameter as string;
-            if (paramString == null) { return DependencyProperty.UnsetValue; }
+    //    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    //    {
+    //        var paramString = parameter as string;
+    //        if (paramString == null) { return DependencyProperty.UnsetValue; }
 
-            if (true.Equals(value)) { return Enum.Parse(targetType, paramString); }
-            else return Binding.DoNothing;
-            //else return DependencyProperty.UnsetValue;//こっちだとラジオボタンに赤枠がつく
-        }
-    }
-    public enum FileNameBaseType
-    {
-        Date,
-        Serial,
-    }
+    //        if (true.Equals(value)) { return Enum.Parse(targetType, paramString); }
+    //        else return Binding.DoNothing;
+    //        //else return DependencyProperty.UnsetValue;//こっちだとラジオボタンに赤枠がつく
+    //    }
+    //}
+    //public enum FileNameBaseType
+    //{
+    //    Date,
+    //    Serial,
+    //}
+
 
 
     public class StringFormatDigitConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-
+            string prefix = "開始：";
             int digit = decimal.ToInt32((decimal)value);
             string format = "";
             for (int i = 0; i < digit; i++)
             {
                 format += "0";
             }
+            format = prefix + format + ";" + prefix + "-" + format + ";" + prefix + format;
             return format;
+            //"開始：0;開始：-0;開始：0"
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -1317,4 +1486,7 @@ namespace Pixcren
             throw new NotImplementedException();
         }
     }
+
+
+
 }
