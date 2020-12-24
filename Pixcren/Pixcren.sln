@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30717.126
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pixcren", "Pixcren\Pixcren.csproj", "{6CE223E3-BA64-4692-8999-FEDCB4D394CD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Pixcren", "Pixcren\Pixcren.csproj", "{6CE223E3-BA64-4692-8999-FEDCB4D394CD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EBA958F2-E87C-4269-826E-9D1193F782A0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

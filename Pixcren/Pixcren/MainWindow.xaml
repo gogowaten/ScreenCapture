@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:Pixcren"
         xmlns:myCtrl="clr-namespace:ControlLibraryCore20200620;assembly=ControlLibraryCore20200620"
         mc:Ignorable="d"
-        Title="MainWindow" Height="550" Width="450" ResizeMode="CanResizeWithGrip">
+        Title="MainWindow" Height="600" Width="450" ResizeMode="CanResizeWithGrip">
   <Window.Resources>
     <Style TargetType="CheckBox">
       <Setter Property="VerticalAlignment" Value="Center"/>
@@ -152,6 +152,26 @@
               </DockPanel>
             </GroupBox>
           </StackPanel>
+          <GroupBox Header="キャプチャ時の音">
+            <StackPanel>
+              <Button x:Name="MyButtonSound" Content="視聴" Click="MyButtonSound_Click"/>
+              <ComboBox Name="MyComboBoxSoundType" DisplayMemberPath="Value" SelectedValuePath="Key"
+                        SelectedValue="{Binding Path=MySoundPlay}"/>
+              <StackPanel>
+                <DockPanel>
+                  <TextBlock Text="指定" VerticalAlignment="Center"/>
+                  <Button DockPanel.Dock="Right" Content="削除" Click="MyButtonRemoveSound_Click"
+                            Tag="{Binding ElementName=MyComboBoxSoundFilePath}"/>
+                  <Button DockPanel.Dock="Right" Content="追加"
+                            Click="MyButtonAddSound_Click" Tag="{Binding ElementName=MyComboBoxSoundFilePath}"/>
+                  <ComboBox Name="MyComboBoxSoundFilePath" ItemsSource="{Binding Path=SoundFilePathList}"
+                            SelectedValue="{Binding Path=SoundFilePath}"
+                            SelectionChanged="MyComboBoxSoundFilePath_SelectionChanged"/>
+                </DockPanel>
+              </StackPanel>
+
+            </StackPanel>
+          </GroupBox>
         </StackPanel>
       </TabItem>
 

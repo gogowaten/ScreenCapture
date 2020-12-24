@@ -23,6 +23,7 @@ using System.Globalization;
 using System.Runtime.Serialization;
 using System.Xml;
 using System.Collections.ObjectModel;
+using Microsoft.Win32;
 
 namespace Pixcren
 {
@@ -281,7 +282,7 @@ namespace Pixcren
         //private BitmapSource MyBitmapScreen;//全画面画像
 
         private AppConfig MyAppConfig;
-        private int vHotKey;//ホットキーの仮想キーコード
+        //private int vHotKey;//ホットキーの仮想キーコード
 
         //マウスカーソル情報
         private POINT MyCursorPoint;//座標        
@@ -295,19 +296,21 @@ namespace Pixcren
         //各Rect
         //private List<MyRectInfo> MyRects;
         //private Dictionary<CaptureRectType, MyRectRect> MyRectRects;
-        private Dictionary<CaptureRectType, string> MyDCRectName;
-        private Dictionary<CaptureRectType, Int32Rect> MyDictRectRect;
+        //private Dictionary<CaptureRectType, string> MyDCRectName;
+        //private Dictionary<CaptureRectType, Int32Rect> MyDictRectRect;
 
 
         //アプリ情報
         private const string AppName = "PixcrenShot山芋";
         private string AppVersion;
 
-        //ホットキーID
-        private const int HOTKEY_ID1 = 0x0001;
+        //ホットキー
+        private const int HOTKEY_ID1 = 0x0001;//ID
+        private IntPtr MyWindowHandle;//アプリのハンドル
 
-        private IntPtr MyWindowHandle;
-
+        //キャプチャ時の音
+        private System.Media.SoundPlayer MySound;//指定の音
+        private System.Media.SoundPlayer MySoundDefault;//規定の内蔵音源
 
         public MainWindow()
         {
@@ -315,10 +318,7 @@ namespace Pixcren
             this.Loaded += MainWindow_Loaded;
             this.Closed += MainWindow_Closed;
             MyInitializeHotKey();
-
-            List<double> vs = new() { 0, 1.5, 2.5, 3.5, 5 };
-            MyComboBoxFileNameDateOrder.ItemsSource = vs;
-            MyComboBoxFileNameSerialOrder.ItemsSource = vs;
+            MyInisializeComboBox();
 
 
 
@@ -370,20 +370,45 @@ namespace Pixcren
             var cl = Environment.GetCommandLineArgs();
             AppVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(cl[0]).FileVersion;
 
-            AppDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            //実行ファイルのあるディレクトリ取得
+            System.Reflection.Assembly assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            AppDir = System.IO.Path.GetDirectoryName(assembly.Location);// System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+            //鳴らす音設定、内蔵音源セット。指定音源は初期化
+            MySoundDefault = new System.Media.SoundPlayer(assembly.GetManifestResourceStream("Pixcren.pekowave2.wav"));
+            //MySoundDefault.SoundLocation = string.Empty;
+            MySound = new System.Media.SoundPlayer();
+            //MySound.SoundLocation = string.Empty;
+
             MyAppConfig = new AppConfig();
+            this.DataContext = MyAppConfig;
+            //MyTextBlockFileNameSmple.Tag = MyAppConfig;
+
+
+
+
+
+        }
+
+        //アプリ終了時
+        private void MainWindow_Closed(object sender, EventArgs e)
+        {
+            //ホットキーの登録解除
+            UnregisterHotKey(MyWindowHandle, HOTKEY_ID1);
+            ComponentDispatcher.ThreadPreprocessMessage -= ComponentDispatcher_ThreadPreprocessMessage;
+
+            //音源開放
+            MySound.Dispose();
+        }
+
+        private void MyInisializeComboBox()
+        {
+            List<double> vs = new() { 0, 1.5, 2.5, 3.5, 5 };
+            MyComboBoxFileNameDateOrder.ItemsSource = vs;
+            MyComboBoxFileNameSerialOrder.ItemsSource = vs;
 
             ComboBoxSaveFileType.ItemsSource = Enum.GetValues(typeof(ImageType));
-
-            this.DataContext = MyAppConfig;
-            MyTextBlockFileNameSmple.Tag = MyAppConfig;
-
-
-            var inu = Enum.Parse(typeof(ImageType), ImageType.png.ToString());
-
-
-            //SetCaptureRectType();
-            MyDCRectName = new Dictionary<CaptureRectType, string>
+            MyComboBoxCaputureRect.ItemsSource = new Dictionary<CaptureRectType, string>
             {
                 { CaptureRectType.Screen, "全画面" },
                 { CaptureRectType.Window, "ウィンドウ" },
@@ -391,21 +416,16 @@ namespace Pixcren
                 { CaptureRectType.UnderCursor, "カーソル下のコントロール" },
                 { CaptureRectType.UnderCursorClient, "カーソル下のクライアント領域" },
             };
-            MyComboBoxCaputureRect.ItemsSource = MyDCRectName;
-            MyDictRectRect = new Dictionary<CaptureRectType, Int32Rect>();
 
-
-
+            //MyDictRectRect = new Dictionary<CaptureRectType, Int32Rect>();
 
             MyComboBoxHotKey.ItemsSource = Enum.GetValues(typeof(Key));
 
-        }
-
-        private void MainWindow_Closed(object sender, EventArgs e)
-        {
-            //ホットキーの登録解除
-            UnregisterHotKey(MyWindowHandle, HOTKEY_ID1);
-            ComponentDispatcher.ThreadPreprocessMessage -= ComponentDispatcher_ThreadPreprocessMessage;
+            MyComboBoxSoundType.ItemsSource = new Dictionary<MySoundPlay, string> {
+                { MySoundPlay.None, "鳴らさない"},
+                { MySoundPlay.PlayDefault, "既定の音" },
+                { MySoundPlay.PlayOrder, "指定した音" }
+            };
         }
 
         #region ホットキー
@@ -421,9 +441,14 @@ namespace Pixcren
             if (msg.message != WM_HOTKEY) return;
             else if (msg.wParam.ToInt32() == HOTKEY_ID1)
             {
-                string neko = MyComboBoxSaveDirectory.Text;
-                if (neko == null) return;
-                if (System.IO.Directory.Exists(neko) == false)
+                //保存ディレクトリ取得、未指定ならマイドキュメントにする。存在しない場合はエラー表示
+                string directory = MyComboBoxSaveDirectory.Text;
+                if (string.IsNullOrWhiteSpace(directory))
+                {
+                    directory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                }
+
+                if (System.IO.Directory.Exists(directory) == false)
                 {
                     MessageBox.Show($"指定されている保存場所は存在しないので保存できない");
                     return;
@@ -436,7 +461,8 @@ namespace Pixcren
                 //カーソル画像取得
                 if (MyAppConfig.IsDrawCursor == true)
                 {
-                    SetCursorInfo();
+                    //取得できなかった場合は処理中断
+                    if (SetCursorInfo() == false) return;
                 }
 
                 //画面全体画像取得
@@ -508,7 +534,7 @@ namespace Pixcren
 
                 //保存
                 BitmapSource bitmap = MakeBitmapForSave(screen, rect);
-                string fullPath = MakeFullPath(neko, MakeFileName(), MyAppConfig.ImageType.ToString());
+                string fullPath = MakeFullPath(directory, MakeFileName(), MyAppConfig.ImageType.ToString());
                 //string fullPath = MakeFullPath(neko, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
                 try
                 {
@@ -623,42 +649,50 @@ namespace Pixcren
             int bottom = myRECT.bottom > bitmapHeight ? bitmapHeight : myRECT.bottom;
             return new Int32Rect(left, top, right - left, bottom - top);
         }
+
         /// <summary>
         /// マウスカーソルの情報をフィールドに格納
         /// </summary>
-        private void SetCursorInfo()
+        private bool SetCursorInfo()
         {
-            CURSORINFO cInfo = new CURSORINFO();
-            cInfo.cbSize = Marshal.SizeOf(cInfo);
-            GetCursorInfo(out cInfo);
-            GetIconInfo(cInfo.hCursor, out ICONINFO iInfo);
-            //カーソル画像
-            MyBitmapCursor =
-                Imaging.CreateBitmapSourceFromHIcon(cInfo.hCursor,
-                                                    Int32Rect.Empty,
-                                                    BitmapSizeOptions.FromEmptyOptions());
-            //カーソルマスク画像
-            MyBitmapCursorMask =
-                Imaging.CreateBitmapSourceFromHBitmap(iInfo.hbmMask,
-                                                      IntPtr.Zero,
-                                                      Int32Rect.Empty,
-                                                      BitmapSizeOptions.FromEmptyOptions());
-            //マスク画像を使うかどうかの判定
-            //2色画像 かつ 高さが幅の2倍ならマスク画像使用
-            IsMaskUse = (MyBitmapCursorMask.Format == PixelFormats.Indexed1) &
-                (MyBitmapCursorMask.PixelHeight == MyBitmapCursorMask.PixelWidth * 2);
+            try
+            {
+                CURSORINFO cInfo = new CURSORINFO();
+                cInfo.cbSize = Marshal.SizeOf(cInfo);
+                GetCursorInfo(out cInfo);
+                GetIconInfo(cInfo.hCursor, out ICONINFO iInfo);
+                //カーソル画像
+                MyBitmapCursor =
+                    Imaging.CreateBitmapSourceFromHIcon(cInfo.hCursor,
+                                                        Int32Rect.Empty,
+                                                        BitmapSizeOptions.FromEmptyOptions());
+                //カーソルマスク画像
+                MyBitmapCursorMask =
+                    Imaging.CreateBitmapSourceFromHBitmap(iInfo.hbmMask,
+                                                          IntPtr.Zero,
+                                                          Int32Rect.Empty,
+                                                          BitmapSizeOptions.FromEmptyOptions());
+                //マスク画像を使うかどうかの判定
+                //2色画像 かつ 高さが幅の2倍ならマスク画像使用
+                IsMaskUse = (MyBitmapCursorMask.Format == PixelFormats.Indexed1) &
+                    (MyBitmapCursorMask.PixelHeight == MyBitmapCursorMask.PixelWidth * 2);
 
-            //マスク画像のピクセルフォーマットはIndexed1なんだけど、計算しやすいようにBgra32に変換しておく
-            MyBitmapCursorMask = new FormatConvertedBitmap(MyBitmapCursorMask,
-                                                           PixelFormats.Bgra32,
-                                                           null,
-                                                           0);
+                //マスク画像のピクセルフォーマットはIndexed1なんだけど、計算しやすいようにBgra32に変換しておく
+                MyBitmapCursorMask = new FormatConvertedBitmap(MyBitmapCursorMask,
+                                                               PixelFormats.Bgra32,
+                                                               null,
+                                                               0);
 
-            //ホットスポット保持
-            MyCursorHotspotX = iInfo.xHotspot;
-            MyCursorHotspotY = iInfo.yHotspot;
+                //ホットスポット保持
+                MyCursorHotspotX = iInfo.xHotspot;
+                MyCursorHotspotY = iInfo.yHotspot;
 
-
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         //仮想画面全体の画像取得
@@ -920,24 +954,21 @@ namespace Pixcren
             //var unu = MyRadioButtonFileNameDate.IsChecked;
             var uma = MakeFileName();
             var tako = MyAppConfig;
+
         }
 
         #region 保存先リスト追加と削除
         //保存フォルダをリストに追加
         private void ButtonSaveDirectoryAdd_Click(object sender, RoutedEventArgs e)
         {
+            //フォルダ指定なし
+            //FolderDialog dialog = new FolderDialog(this);
+
             //フォルダ指定あり
             string folderPath;
             folderPath = MyComboBoxSaveDirectory.Text;//表示しているテキスト
-                                                      //if (System.IO.Directory.Exists(folderPath))
-                                                      //{
-                                                      //    AddDir(folderPath);
-                                                      //}
 
             FolderDialog dialog = new FolderDialog(folderPath, this);
-
-            //フォルダ指定なし
-            //FolderDialog dialog = new FolderDialog(this);
 
             dialog.ShowDialog();
             if (dialog.DialogResult == true)
@@ -1006,6 +1037,7 @@ namespace Pixcren
                     //中間だった場合は同じIndexでいい
                     combo.SelectedIndex = idx;
                 }
+
             }
         }
 
@@ -1309,6 +1341,92 @@ namespace Pixcren
         {
             RemoveComboBoxItem(sender, MyAppConfig.FileNameDateFormatList);
         }
+
+
+        //キャプチャ時の音
+        private void MyButtonRemoveSound_Click(object sender, RoutedEventArgs e)
+        {
+            //リストから削除
+            RemoveComboBoxItem(sender, MyAppConfig.SoundFilePathList);
+            //音の変更
+            string path = MyComboBoxSoundFilePath.Text;
+            ChangeSound(path);
+        }
+
+        private void MyButtonAddSound_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog();
+            dialog.Filter = "(wav)|*.wav";
+            if (dialog.ShowDialog() == true)
+            {
+                AddTextToComboBox(dialog.FileName, MyAppConfig.SoundFilePathList, MyComboBoxSoundFilePath);
+                //MyAppConfig.SoundFilePathList.Add(dialog.FileName);
+                //MySound = new System.Media.SoundPlayer(dialog.FileName);
+                //MySound = new System.Media.SoundPlayer(new System.IO.FileStream(dialog.FileName, System.IO.FileMode.Open, System.IO.FileAccess.Read));
+                ChangeSound(dialog.FileName);
+            }
+
+        }
+
+        private void MyButtonSound_Click(object sender, RoutedEventArgs e)
+        {
+            switch (MyAppConfig.MySoundPlay)
+            {
+                case MySoundPlay.None: return;
+                case MySoundPlay.PlayDefault:
+                    MySoundDefault.Play();
+                    break;
+                case MySoundPlay.PlayOrder:
+                    //if (MySound == null) return;
+                    if (MySound == null || MySound.SoundLocation == string.Empty) return;
+                    try
+                    {
+                        //MySound.Stream.Position = 0;
+                        MySound.Play();
+                    }
+                    catch (Exception ex)
+                    {                        
+                        MessageBox.Show($"{ex.Message}");
+                    }
+
+                    break;
+                default:
+                    break;
+            }
+
+        }
+
+        private void MyComboBoxSoundFilePath_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
+            ChangeSound(MyAppConfig.SoundFilePath);
+        }
+        //音の変更
+        private void ChangeSound(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+            {
+                MySound = null;
+                //MySound.SoundLocation = string.Empty;//何故かエラーになる
+                //MySound.Dispose();
+
+            }
+            else
+            {
+                if (MySound == null)
+                {
+                    MySound = new System.Media.SoundPlayer(filePath);
+                    //MySound = new System.Media.SoundPlayer(new System.IO.FileStream(filePath, System.IO.FileMode.Open, System.IO.FileAccess.Read));
+                }
+                else
+                {
+                    MySound.SoundLocation = filePath;
+                    //MySound.Stream = null;
+                    //MySound.Stream = new System.IO.FileStream(filePath, System.IO.FileMode.Open, System.IO.FileAccess.Read);
+                }
+
+            }
+        }
     }
 
 
@@ -1370,6 +1488,13 @@ namespace Pixcren
         [DataMember] public string FileNameText4 { get; set; }
         [DataMember] public ObservableCollection<string> FileNameText4List { get; set; } = new();
 
+        //音
+        [DataMember] public bool IsSoundPlay { get; set; }
+        //[DataMember] public bool IsSoundDefault { get; set; }
+        [DataMember] public ObservableCollection<string> SoundFilePathList { get; set; } = new();
+        [DataMember] public string SoundFilePath { get; set; }
+        [DataMember] public MySoundPlay MySoundPlay { get; set; }
+
 
 
         private ImageType _ImageType;//保存画像形式
@@ -1410,6 +1535,21 @@ namespace Pixcren
         }
 
 
+        //        c# - DataContract、デフォルトのDataMember値
+        //https://stackoverrun.com/ja/q/2220925
+
+        //初期値の設定
+        [OnDeserialized]
+        void OnDeserialized(System.Runtime.Serialization.StreamingContext c)
+        {
+            if (DirList == null) DirList = new();
+            if (FileNameDateFormatList == null) FileNameDateFormatList = new();
+            if (FileNameText1List == null) FileNameText1List = new();
+            if (FileNameText2List == null) FileNameText2List = new();
+            if (FileNameText3List == null) FileNameText3List = new();
+            if (FileNameText4List == null) FileNameText4List = new();
+            if (SoundFilePathList == null) SoundFilePathList = new();
+        }
     }
 
 
@@ -1487,6 +1627,13 @@ namespace Pixcren
         }
     }
 
+
+    public enum MySoundPlay
+    {
+        None,
+        PlayDefault,
+        PlayOrder
+    }
 
 
 }
