@@ -301,7 +301,7 @@ namespace Pixcren
 
 
         //アプリ情報
-        private const string AppName = "PixcrenShot山芋";
+        private const string AppName = "Pixcren青蓮";
         private string AppVersion;
 
         //ホットキー
@@ -309,7 +309,7 @@ namespace Pixcren
         private IntPtr MyWindowHandle;//アプリのハンドル
 
         //キャプチャ時の音
-        private System.Media.SoundPlayer MySound;//指定の音
+        private System.Media.SoundPlayer MySoundOrder;//指定の音
         private System.Media.SoundPlayer MySoundDefault;//規定の内蔵音源
 
         public MainWindow()
@@ -319,7 +319,6 @@ namespace Pixcren
             this.Closed += MainWindow_Closed;
             MyInitializeHotKey();
             MyInisializeComboBox();
-
 
 
             var now = DateTime.Now;
@@ -377,12 +376,25 @@ namespace Pixcren
             //鳴らす音設定、内蔵音源セット。指定音源は初期化
             MySoundDefault = new System.Media.SoundPlayer(assembly.GetManifestResourceStream("Pixcren.pekowave2.wav"));
             //MySoundDefault.SoundLocation = string.Empty;
-            MySound = new System.Media.SoundPlayer();
+            MySoundOrder = new System.Media.SoundPlayer();
             //MySound.SoundLocation = string.Empty;
 
-            MyAppConfig = new AppConfig();
+
+            //設定ファイルが存在すれば読み込んで適用、なければ初期化して適用
+            string configPath = AppDir + "\\" + APP_CONFIG_FILE_NAME;
+            if (System.IO.File.Exists(configPath))
+            {
+                MyAppConfig = LoadConfig(configPath);
+            }
+
+            else
+            {
+                MyAppConfig = new AppConfig();
+            }
             this.DataContext = MyAppConfig;
-            //MyTextBlockFileNameSmple.Tag = MyAppConfig;
+
+            //ホットキー登録
+            ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1);
 
 
 
@@ -393,12 +405,15 @@ namespace Pixcren
         //アプリ終了時
         private void MainWindow_Closed(object sender, EventArgs e)
         {
+            //設定の保存
+            SaveConfig(AppDir + "\\" + APP_CONFIG_FILE_NAME);
+
             //ホットキーの登録解除
             UnregisterHotKey(MyWindowHandle, HOTKEY_ID1);
             ComponentDispatcher.ThreadPreprocessMessage -= ComponentDispatcher_ThreadPreprocessMessage;
 
             //音源開放
-            MySound.Dispose();
+            MySoundOrder.Dispose();
         }
 
         private void MyInisializeComboBox()
@@ -417,9 +432,9 @@ namespace Pixcren
                 { CaptureRectType.UnderCursorClient, "カーソル下のクライアント領域" },
             };
 
-            //MyDictRectRect = new Dictionary<CaptureRectType, Int32Rect>();
 
             MyComboBoxHotKey.ItemsSource = Enum.GetValues(typeof(Key));
+
 
             MyComboBoxSoundType.ItemsSource = new Dictionary<MySoundPlay, string> {
                 { MySoundPlay.None, "鳴らさない"},
@@ -539,6 +554,20 @@ namespace Pixcren
                 try
                 {
                     SaveBitmap(bitmap, fullPath);
+                    //音
+                    switch (MyComboBoxSoundType.SelectedValue)
+                    {
+                        case MySoundPlay.None:
+                            break;
+                        case MySoundPlay.PlayDefault:
+                            MySoundDefault.Play();
+                            break;
+                        case MySoundPlay.PlayOrder:
+                            MySoundOrder.Play();
+                            break;
+                        default:
+                            break;
+                    }
                     //MessageBox.Show("保存した");
                 }
                 catch (Exception ex)
@@ -885,16 +914,11 @@ namespace Pixcren
         #region 設定保存と読み込み
         private void MyButtonSaveState_Click(object sender, RoutedEventArgs e)
         {
-            if (SaveConfig2(AppDir + "\\" + APP_CONFIG_FILE_NAME))
-            {
-                MessageBox.Show("保存しました");
-            }
-            else { MessageBox.Show("保存できなかった"); };
+            SaveConfig(AppDir + "\\" + APP_CONFIG_FILE_NAME);
         }
 
         //アプリの設定保存
-
-        private bool SaveConfig2(string path)
+        private bool SaveConfig(string path)
         {
             var serializer = new DataContractSerializer(typeof(AppConfig));
             XmlWriterSettings settings = new();
@@ -909,14 +933,17 @@ namespace Pixcren
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"保存できなかった\n{ex.Message}");
+
+                MessageBox.Show(
+                    $"アプリの設定保存できなかった\n{ex.Message}",
+                    $"{System.Reflection.Assembly.GetExecutingAssembly()}");
                 return false;
             }
         }
 
         private void MyButtonLoadState_Click(object sender, RoutedEventArgs e)
         {
-            AppConfig config = LoadConfig2(AppDir + "\\" + APP_CONFIG_FILE_NAME);
+            AppConfig config = LoadConfig(AppDir + "\\" + APP_CONFIG_FILE_NAME);
             if (config != null)
             {
                 MyAppConfig = config;
@@ -926,7 +953,7 @@ namespace Pixcren
 
         //アプリの設定読み込み
 
-        private AppConfig LoadConfig2(string path)
+        private AppConfig LoadConfig(string path)
         {
             var serealizer = new DataContractSerializer(typeof(AppConfig));
             try
@@ -938,10 +965,24 @@ namespace Pixcren
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"読み込みできなかった\n{ex.Message}");
+                MessageBox.Show(
+                    $"読み込みできなかった\n{ex.Message}",
+                    $"{System.Reflection.Assembly.GetExecutingAssembly().GetName()}");
                 return null;
             }
         }
+
+        //名前を付けて保存
+        private void MyButtonSaveStateFile_Click(object sender, RoutedEventArgs e)
+        {
+            Microsoft.Win32.SaveFileDialog dialog = new();
+            dialog.Filter = "(xml)|*.xml";
+            if (dialog.ShowDialog() == true)
+            {
+                SaveConfig(dialog.FileName);
+            }
+        }
+
 
         #endregion
 
@@ -1038,6 +1079,21 @@ namespace Pixcren
                     combo.SelectedIndex = idx;
                 }
 
+            }
+        }
+
+        //保存場所を開く
+        private void MyButtonOpenSaveFolder_Click(object sender, RoutedEventArgs e)
+        {
+            string dir = MyComboBoxSaveDirectory.Text;
+
+            if (string.IsNullOrWhiteSpace(dir) || System.IO.Directory.Exists(dir) == false)
+            {
+                MessageBox.Show($"指定された保存場所\n{dir}\nは存在しない");
+            }
+            else
+            {
+                System.Diagnostics.Process.Start("EXPLORER.EXE", dir);
             }
         }
 
@@ -1343,6 +1399,8 @@ namespace Pixcren
         }
 
 
+        #region キャプチャ時の音関係
+
         //キャプチャ時の音
         private void MyButtonRemoveSound_Click(object sender, RoutedEventArgs e)
         {
@@ -1350,7 +1408,7 @@ namespace Pixcren
             RemoveComboBoxItem(sender, MyAppConfig.SoundFilePathList);
             //音の変更
             string path = MyComboBoxSoundFilePath.Text;
-            ChangeSound(path);
+            ChangeSoundOrder(path);
         }
 
         private void MyButtonAddSound_Click(object sender, RoutedEventArgs e)
@@ -1363,7 +1421,7 @@ namespace Pixcren
                 //MyAppConfig.SoundFilePathList.Add(dialog.FileName);
                 //MySound = new System.Media.SoundPlayer(dialog.FileName);
                 //MySound = new System.Media.SoundPlayer(new System.IO.FileStream(dialog.FileName, System.IO.FileMode.Open, System.IO.FileAccess.Read));
-                ChangeSound(dialog.FileName);
+                ChangeSoundOrder(dialog.FileName);
             }
 
         }
@@ -1378,14 +1436,14 @@ namespace Pixcren
                     break;
                 case MySoundPlay.PlayOrder:
                     //if (MySound == null) return;
-                    if (MySound == null || MySound.SoundLocation == string.Empty) return;
+                    if (MySoundOrder == null || MySoundOrder.SoundLocation == string.Empty) return;
                     try
                     {
                         //MySound.Stream.Position = 0;
-                        MySound.Play();
+                        MySoundOrder.Play();
                     }
                     catch (Exception ex)
-                    {                        
+                    {
                         MessageBox.Show($"{ex.Message}");
                     }
 
@@ -1399,34 +1457,38 @@ namespace Pixcren
         private void MyComboBoxSoundFilePath_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
 
-            ChangeSound(MyAppConfig.SoundFilePath);
+            ChangeSoundOrder(MyAppConfig.SoundFilePath);
         }
-        //音の変更
-        private void ChangeSound(string filePath)
+        //指定の音の変更
+        private void ChangeSoundOrder(string filePath)
         {
             if (string.IsNullOrEmpty(filePath))
             {
-                MySound = null;
+                MySoundOrder = null;
                 //MySound.SoundLocation = string.Empty;//何故かエラーになる
                 //MySound.Dispose();
 
             }
             else
             {
-                if (MySound == null)
+                if (MySoundOrder == null)
                 {
-                    MySound = new System.Media.SoundPlayer(filePath);
+                    MySoundOrder = new System.Media.SoundPlayer(filePath);
                     //MySound = new System.Media.SoundPlayer(new System.IO.FileStream(filePath, System.IO.FileMode.Open, System.IO.FileAccess.Read));
                 }
                 else
                 {
-                    MySound.SoundLocation = filePath;
+                    MySoundOrder.SoundLocation = filePath;
                     //MySound.Stream = null;
                     //MySound.Stream = new System.IO.FileStream(filePath, System.IO.FileMode.Open, System.IO.FileAccess.Read);
                 }
 
             }
         }
+
+        #endregion キャプチャ時の音関係
+
+
     }
 
 
@@ -1530,7 +1592,9 @@ namespace Pixcren
         {
             DirList = new ObservableCollection<string>();
             JpegQuality = 94;
-            IsDrawCursor = true;
+            FileNameSerialIncreace = 1m;
+            HotKey = Key.PrintScreen;
+            IsDrawCursor = false;
 
         }
 
