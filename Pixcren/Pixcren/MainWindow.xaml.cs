@@ -301,7 +301,7 @@ namespace Pixcren
 
 
         //アプリ情報
-        private const string AppName = "Pixcren青蓮";
+        private const string AppName = "Pixcren";
         private string AppVersion;
 
         //ホットキー
@@ -397,7 +397,8 @@ namespace Pixcren
             ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1);
 
 
-
+            //タイトルバー
+            this.Title = AppName + AppVersion;
 
 
         }
@@ -551,31 +552,26 @@ namespace Pixcren
                 BitmapSource bitmap = MakeBitmapForSave(screen, rect);
                 string fullPath = MakeFullPath(directory, MakeFileName(), MyAppConfig.ImageType.ToString());
                 //string fullPath = MakeFullPath(neko, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
-                try
+                SaveBitmap(bitmap, fullPath);
+                //連番に加算
+                if (MyAppConfig.IsFileNameSerial) AddIncrementToSerial();
+                //音
+                switch (MyComboBoxSoundType.SelectedValue)
                 {
-                    SaveBitmap(bitmap, fullPath);
-                    //音
-                    switch (MyComboBoxSoundType.SelectedValue)
-                    {
-                        case MySoundPlay.None:
-                            break;
-                        case MySoundPlay.PlayDefault:
-                            MySoundDefault.Play();
-                            break;
-                        case MySoundPlay.PlayOrder:
-                            MySoundOrder.Play();
-                            break;
-                        default:
-                            break;
-                    }
-                    //MessageBox.Show("保存した");
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"保存できなかった\n{ex}");
+                    case MySoundPlay.None:
+                        break;
+                    case MySoundPlay.PlayDefault:
+                        MySoundDefault.Play();
+                        break;
+                    case MySoundPlay.PlayOrder:
+                        MySoundOrder.Play();
+                        break;
+                    default:
+                        break;
                 }
             }
         }
+
         private IntPtr GetParentWindowFromForegroundWindow()
         {
             //最前面ウィンドウを起点にWindowTextがあるもの(GetWindowTextの戻り値が0以外)をGetParentで10回まで辿る            
@@ -943,12 +939,25 @@ namespace Pixcren
 
         private void MyButtonLoadState_Click(object sender, RoutedEventArgs e)
         {
-            AppConfig config = LoadConfig(AppDir + "\\" + APP_CONFIG_FILE_NAME);
-            if (config != null)
+            Microsoft.Win32.OpenFileDialog dialog = new();
+            dialog.Filter = "(xml)|*.xml";
+            if (dialog.ShowDialog() == true)
             {
+                var config = LoadConfig(dialog.FileName);
+                if (config == null) return;
                 MyAppConfig = config;
                 this.DataContext = MyAppConfig;
+
+                //ホットキー登録
+                ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1);
+
             }
+            //AppConfig config = LoadConfig(AppDir + "\\" + APP_CONFIG_FILE_NAME);
+            //if (config != null)
+            //{
+            //    MyAppConfig = config;
+            //    this.DataContext = MyAppConfig;
+            //}
         }
 
         //アプリの設定読み込み
@@ -1137,9 +1146,9 @@ namespace Pixcren
                     encoder.Save(fs);
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                MessageBox.Show($"保存できなかった\n{ex}");
             }
         }
 
@@ -1234,6 +1243,10 @@ namespace Pixcren
             string fileName = "";
             DateTime dateTime = DateTime.Now;
             bool isOverDate = false, isOverSerial = false;
+            if (MyAppConfig.IsFileNameDate == false && MyAppConfig.IsFileNameSerial == false)
+            {
+                MyCheckBoxFileNameData.IsChecked = true;
+            }
             if (MyAppConfig.IsFileNameDate == false) isOverDate = true;
             if (MyAppConfig.IsFileNameSerial == false) isOverSerial = true;
             MyOrder();
@@ -1278,7 +1291,7 @@ namespace Pixcren
                 {
                     //fileName += MyNumericUpDownFileNameSerial.MyValue.ToString(MySerialFormat());
                     fileName += MyAppConfig.FileNameSerial.ToString(MySerialFormat());
-                    MyNumericUpDownFileNameSerial.MyValue += MyAppConfig.FileNameSerialIncreace;
+
                     isOverSerial = true;
                 }
             }
@@ -1296,6 +1309,13 @@ namespace Pixcren
                 }
                 return str;
             }
+
+        }
+
+        //連番に増加値を加算
+        private void AddIncrementToSerial()
+        {
+            MyNumericUpDownFileNameSerial.MyValue += MyNumericUpDownFileNameSerialIncreace.MyValue;
         }
 
         #endregion 画像保存
@@ -1328,7 +1348,7 @@ namespace Pixcren
 
         private void MyButtonSample_Click(object sender, RoutedEventArgs e)
         {
-            MyTextBlockFileNameSmple.Text = MakeFileName();
+            MyTextBoxFileNameSmple.Text = MakeFileName() + "." + MyAppConfig.ImageType.ToString();
         }
 
         private void MyButtonAddFileNameText1_Click(object sender, RoutedEventArgs e)
@@ -1593,9 +1613,10 @@ namespace Pixcren
             DirList = new ObservableCollection<string>();
             JpegQuality = 94;
             FileNameSerialIncreace = 1m;
+            FileNameSerialDigit = 4m;
             HotKey = Key.PrintScreen;
             IsDrawCursor = false;
-
+            IsFileNameDate = true;
         }
 
 
