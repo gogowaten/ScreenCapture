@@ -42,8 +42,8 @@ namespace Pixcren
 
 
         //キーの入力取得
-        [DllImport("user32.dll")]
-        private static extern short GetAsyncKeyState(int vKey);
+        //[DllImport("user32.dll")]
+        //private static extern short GetAsyncKeyState(int vKey);
 
         //Rect取得用
         private struct RECT
@@ -70,8 +70,8 @@ namespace Pixcren
             }
         }
 
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetActiveWindow();
+        //[DllImport("user32.dll")]
+        //private static extern IntPtr GetActiveWindow();
 
         //ウィンドウ名取得
         [DllImport("user32.dll")]
@@ -128,45 +128,48 @@ namespace Pixcren
         //パレントウィンドウ取得
         [DllImport("user32.dll")]
         private static extern IntPtr GetParent(IntPtr hWnd);
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetWindow(IntPtr hWnd, GETWINDOW_CMD uCmd);//本当のuCmdはuint型
-        enum GETWINDOW_CMD
-        {
-            GW_CHILD = 5,
-            //指定されたウィンドウが親ウィンドウである場合、取得されたハンドルは、Zオーダーの最上位にある子ウィンドウを識別します。それ以外の場合、取得されたハンドルはNULLです。この関数は、指定されたウィンドウの子ウィンドウのみを調べます。子孫ウィンドウは調べません。
-            GW_ENABLEDPOPUP = 6,
-            //取得されたハンドルは、指定されたウィンドウが所有する有効なポップアップウィンドウを識別します（検索では、GW_HWNDNEXTを使用して最初に見つかったそのようなウィンドウが使用されます）。それ以外の場合、有効なポップアップウィンドウがない場合、取得されるハンドルは指定されたウィンドウのハンドルです。
-            GW_HWNDFIRST = 0,
-            //取得されたハンドルは、Zオーダーで最も高い同じタイプのウィンドウを識別します。
-            //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
 
-            GW_HWNDLAST = 1,
-            //取得されたハンドルは、Zオーダーで最も低い同じタイプのウィンドウを識別します。
-            //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
+        //[DllImport("user32.dll")]
+        //private static extern IntPtr GetWindow(IntPtr hWnd, GETWINDOW_CMD uCmd);//本当のuCmdはuint型
+        //enum GETWINDOW_CMD
+        //{
+        //    GW_CHILD = 5,
+        //    //指定されたウィンドウが親ウィンドウである場合、取得されたハンドルは、Zオーダーの最上位にある子ウィンドウを識別します。それ以外の場合、取得されたハンドルはNULLです。この関数は、指定されたウィンドウの子ウィンドウのみを調べます。子孫ウィンドウは調べません。
+        //    GW_ENABLEDPOPUP = 6,
+        //    //取得されたハンドルは、指定されたウィンドウが所有する有効なポップアップウィンドウを識別します（検索では、GW_HWNDNEXTを使用して最初に見つかったそのようなウィンドウが使用されます）。それ以外の場合、有効なポップアップウィンドウがない場合、取得されるハンドルは指定されたウィンドウのハンドルです。
+        //    GW_HWNDFIRST = 0,
+        //    //取得されたハンドルは、Zオーダーで最も高い同じタイプのウィンドウを識別します。
+        //    //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
 
-            GW_HWNDNEXT = 2,
-            //取得されたハンドルは、指定されたウィンドウの下のウィンドウをZオーダーで識別します。
-            //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
+        //    GW_HWNDLAST = 1,
+        //    //取得されたハンドルは、Zオーダーで最も低い同じタイプのウィンドウを識別します。
+        //    //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
 
-            GW_HWNDPREV = 3,
-            //取得されたハンドルは、指定されたウィンドウの上のウィンドウをZオーダーで識別します。
-            //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
+        //    GW_HWNDNEXT = 2,
+        //    //取得されたハンドルは、指定されたウィンドウの下のウィンドウをZオーダーで識別します。
+        //    //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
 
-            GW_OWNER = 4,
-            //取得されたハンドルは、指定されたウィンドウの所有者ウィンドウを識別します（存在する場合）。詳細については、「所有するWindows」を参照してください。
-        }
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetAncestor(IntPtr hWnd, GETANCESTOR_FLAGS gaFlags);//本当のgaFlagsはuint型の1 2 3
+        //    GW_HWNDPREV = 3,
+        //    //取得されたハンドルは、指定されたウィンドウの上のウィンドウをZオーダーで識別します。
+        //    //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
+
+        //    GW_OWNER = 4,
+        //    //取得されたハンドルは、指定されたウィンドウの所有者ウィンドウを識別します（存在する場合）。詳細については、「所有するWindows」を参照してください。
+        //}
+
+        //[DllImport("user32.dll")]
+        //private static extern IntPtr GetAncestor(IntPtr hWnd, GETANCESTOR_FLAGS gaFlags);//本当のgaFlagsはuint型の1 2 3
+
         //GetAncestorのフラグ用
-        enum GETANCESTOR_FLAGS
-        {
-            GA_PARENT = 1,
-            //親ウィンドウを取得します。GetParent関数の場合のように、これには所有者は含まれません。
-            GA_ROOT = 2,
-            //親ウィンドウのチェーンをたどってルートウィンドウを取得します。
-            GA_ROOTOWNER = 3,
-            //GetParent によって返された親ウィンドウと所有者ウィンドウのチェーンをたどって、所有されているルートウィンドウを取得します。
-        }
+        //enum GETANCESTOR_FLAGS
+        //{
+        //    GA_PARENT = 1,
+        //    //親ウィンドウを取得します。GetParent関数の場合のように、これには所有者は含まれません。
+        //    GA_ROOT = 2,
+        //    //親ウィンドウのチェーンをたどってルートウィンドウを取得します。
+        //    GA_ROOTOWNER = 3,
+        //    //GetParent によって返された親ウィンドウと所有者ウィンドウのチェーンをたどって、所有されているルートウィンドウを取得します。
+        //}
 
 
         //DC取得
@@ -197,13 +200,13 @@ namespace Pixcren
         private const int SRCCOPY = 0x00cc0020;
         private const int SRCINVERT = 0x00660046;
 
-        //
-        [DllImport("user32.dll")]
-        private static extern bool PrintWindow(IntPtr hWnd, IntPtr hDC, uint nFlags);
-        private const uint nFrags_PW_CLIENTONLY = 0x00000001;
+        ////
+        //[DllImport("user32.dll")]
+        //private static extern bool PrintWindow(IntPtr hWnd, IntPtr hDC, uint nFlags);
+        //private const uint nFrags_PW_CLIENTONLY = 0x00000001;
 
-        [DllImport("user32.dll")]
-        private static extern bool DeleteDC(IntPtr hdc);
+        //[DllImport("user32.dll")]
+        //private static extern bool DeleteDC(IntPtr hdc);
 
         [DllImport("user32.dll")]
         private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
@@ -225,28 +228,28 @@ namespace Pixcren
         #region マウスカーソル系API
         //マウスカーソル関係
 
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetCursor();
+        //[DllImport("user32.dll")]
+        //private static extern IntPtr GetCursor();
         [DllImport("user32.dll")]
         private static extern bool GetCursorPos(out POINT lpPoint);
-        [DllImport("user32.dll")]
-        private static extern IntPtr DrawIcon(IntPtr hDC, int x, int y, IntPtr hIcon);
-        [DllImport("user32.dll")]
-        private static extern IntPtr DrawIconEx(IntPtr hDC,
-                                                int x,
-                                                int y,
-                                                IntPtr hIcon,
-                                                int cxWidth,
-                                                int cyWidth,
-                                                int istepIfAniCur,
-                                                IntPtr hbrFlickerFreeDraw,
-                                                int diFlags);
-        private const int DI_DEFAULTSIZE = 0x0008;//cxWidth cyWidthが0に指定されている場合に規定サイズで描画する
-        private const int DI_NORMAL = 0x0003;//通常はこれを指定する、IMAGEとMASKの組み合わせ
-        private const int DI_IMAGE = 0x0002;//画像を使用して描画
-        private const int DI_MASK = 0x0001;//マスクを使用して描画
-        private const int DI_COMPAT = 0x0004;//このフラグは無視の意味
-        private const int DI_NOMIRROR = 0x0010;//ミラーリングされていないアイコンとし描画される
+        //[DllImport("user32.dll")]
+        //private static extern IntPtr DrawIcon(IntPtr hDC, int x, int y, IntPtr hIcon);
+        //[DllImport("user32.dll")]
+        //private static extern IntPtr DrawIconEx(IntPtr hDC,
+        //                                        int x,
+        //                                        int y,
+        //                                        IntPtr hIcon,
+        //                                        int cxWidth,
+        //                                        int cyWidth,
+        //                                        int istepIfAniCur,
+        //                                        IntPtr hbrFlickerFreeDraw,
+        //                                        int diFlags);
+        //private const int DI_DEFAULTSIZE = 0x0008;//cxWidth cyWidthが0に指定されている場合に規定サイズで描画する
+        //private const int DI_NORMAL = 0x0003;//通常はこれを指定する、IMAGEとMASKの組み合わせ
+        //private const int DI_IMAGE = 0x0002;//画像を使用して描画
+        //private const int DI_MASK = 0x0001;//マスクを使用して描画
+        //private const int DI_COMPAT = 0x0004;//このフラグは無視の意味
+        //private const int DI_NOMIRROR = 0x0010;//ミラーリングされていないアイコンとし描画される
         [DllImport("user32.dll")]
         private static extern bool GetIconInfo(IntPtr hIcon, out ICONINFO pIconInfo);
         struct ICONINFO
@@ -268,10 +271,10 @@ namespace Pixcren
             public IntPtr hCursor;
             public POINT ptScreenPos;
         }
-        [DllImport("user32.dll")]
-        private static extern IntPtr CopyIcon(IntPtr hIcon);
-        [DllImport("user32.dll")]
-        private static extern bool DestroyIcon(IntPtr hIcon);//CopyIcon使ったあとに使う
+        //[DllImport("user32.dll")]
+        //private static extern IntPtr CopyIcon(IntPtr hIcon);
+        //[DllImport("user32.dll")]
+        //private static extern bool DestroyIcon(IntPtr hIcon);//CopyIcon使ったあとに使う
         #endregion マウスカーソル系
 
 
@@ -369,15 +372,14 @@ namespace Pixcren
             var cl = Environment.GetCommandLineArgs();
             AppVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(cl[0]).FileVersion;
 
+
             //実行ファイルのあるディレクトリ取得
-            System.Reflection.Assembly assembly = System.Reflection.Assembly.GetExecutingAssembly();
-            AppDir = System.IO.Path.GetDirectoryName(assembly.Location);// System.Reflection.Assembly.GetExecutingAssembly().Location);
+            AppDir = Environment.CurrentDirectory;//.NET5より使用可能            
 
             //鳴らす音設定、内蔵音源セット。指定音源は初期化
-            MySoundDefault = new System.Media.SoundPlayer(assembly.GetManifestResourceStream("Pixcren.pekowave2.wav"));
-            //MySoundDefault.SoundLocation = string.Empty;
+            MySoundDefault = new System.Media.SoundPlayer(
+                System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("Pixcren.pekowave2.wav"));
             MySoundOrder = new System.Media.SoundPlayer();
-            //MySound.SoundLocation = string.Empty;
 
 
             //設定ファイルが存在すれば読み込んで適用、なければ初期化して適用
@@ -396,6 +398,11 @@ namespace Pixcren
             //ホットキー登録
             ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1);
 
+            //
+            if (MyAppConfig.DirList.Count == 0)
+            {
+                MyComboBoxSaveDirectory.Text = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            }
 
             //タイトルバー
             this.Title = AppName + AppVersion;
@@ -410,7 +417,7 @@ namespace Pixcren
             SaveConfig(AppDir + "\\" + APP_CONFIG_FILE_NAME);
 
             //ホットキーの登録解除
-            UnregisterHotKey(MyWindowHandle, HOTKEY_ID1);
+            _ = UnregisterHotKey(MyWindowHandle, HOTKEY_ID1);
             ComponentDispatcher.ThreadPreprocessMessage -= ComponentDispatcher_ThreadPreprocessMessage;
 
             //音源開放
@@ -550,25 +557,48 @@ namespace Pixcren
 
                 //保存
                 BitmapSource bitmap = MakeBitmapForSave(screen, rect);
-                string fullPath = MakeFullPath(directory, MakeFileName(), MyAppConfig.ImageType.ToString());
-                //string fullPath = MakeFullPath(neko, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
-                SaveBitmap(bitmap, fullPath);
-                //連番に加算
-                if (MyAppConfig.IsFileNameSerial) AddIncrementToSerial();
-                //音
-                switch (MyComboBoxSoundType.SelectedValue)
+                //クリップボードにコピーするだけ
+                if (MyCheckBoxIsOutputToClipboardOnly.IsChecked == true)
                 {
-                    case MySoundPlay.None:
-                        break;
-                    case MySoundPlay.PlayDefault:
-                        MySoundDefault.Play();
-                        break;
-                    case MySoundPlay.PlayOrder:
-                        MySoundOrder.Play();
-                        break;
-                    default:
-                        break;
+                    try
+                    {
+                        Clipboard.SetImage(bitmap);
+                        PlayMySound();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"クリップボードにコピーできなかった\n{ex.Message}");
+                    }
                 }
+                //ファイルに保存
+                else
+                {
+                    string fullPath = MakeFullPath(directory, MakeFileName(), MyAppConfig.ImageType.ToString());
+                    //string fullPath = MakeFullPath(neko, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
+                    SaveBitmap(bitmap, fullPath);
+                    //連番に加算
+                    if (MyAppConfig.IsFileNameSerial) AddIncrementToSerial();
+                    //音
+                    PlayMySound();
+                }
+
+            }
+        }
+
+        private void PlayMySound()
+        {
+            switch (MyComboBoxSoundType.SelectedValue)
+            {
+                case MySoundPlay.None:
+                    break;
+                case MySoundPlay.PlayDefault:
+                    MySoundDefault.Play();
+                    break;
+                case MySoundPlay.PlayOrder:
+                    MySoundOrder.Play();
+                    break;
+                default:
+                    break;
             }
         }
 
@@ -599,7 +629,7 @@ namespace Pixcren
         private void ChangeHotKey(int vKey, int hotkeyId)
         {
             //上書きはできないので、古いのを削除してから登録
-            UnregisterHotKey(MyWindowHandle, hotkeyId);
+            _ = UnregisterHotKey(MyWindowHandle, hotkeyId);
 
             int mod = GetModifierKeySum();
             if (RegisterHotKey(MyWindowHandle, hotkeyId, mod, vKey) == 0)
@@ -741,6 +771,14 @@ namespace Pixcren
                     Int32Rect.Empty,
                     BitmapSizeOptions.FromEmptyOptions());
 
+            //後片付け
+            DeleteObject(hBmp);
+            _ = ReleaseDC(IntPtr.Zero, screenDC);
+            _ = ReleaseDC(IntPtr.Zero, memDC);
+
+            //画像
+            return source;
+
 
             ////PringWindowを使ったキャプチャはWindow7のウィンドウになるし、タイトル文字が透明
             //IntPtr bb = CreateCompatibleBitmap(screenDC, width, height);
@@ -748,22 +786,9 @@ namespace Pixcren
             ////PrintWindow(GetForegroundWindow(), memDC,nFrags_PW_CLIENTONLY);//クライアント領域
             //PrintWindow(GetForegroundWindow(), memDC, 0);//ウィンドウ
             //var bmp = Imaging.CreateBitmapSourceFromHBitmap(bb, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-
-
-
-
-            //後片付け
-            DeleteObject(hBmp);
-            ReleaseDC(IntPtr.Zero, screenDC);
-            ReleaseDC(IntPtr.Zero, memDC);
-
-
-
-
-
-            //画像
-            return source;
         }
+
+
         //private void SetCaptureRectType()
         //{
         //    //            C#のWPFでComboBoxにDictionaryをバインドする - Ararami Studio
@@ -967,10 +992,8 @@ namespace Pixcren
             var serealizer = new DataContractSerializer(typeof(AppConfig));
             try
             {
-                using (XmlReader xr = XmlReader.Create(path))
-                {
-                    return (AppConfig)serealizer.ReadObject(xr);
-                }
+                using XmlReader xr = XmlReader.Create(path);
+                return (AppConfig)serealizer.ReadObject(xr);
             }
             catch (Exception ex)
             {
@@ -1004,8 +1027,10 @@ namespace Pixcren
             //var unu = MyRadioButtonFileNameDate.IsChecked;
             var uma = MakeFileName();
             var tako = MyAppConfig;
-
+            MessageBox.Show($"{AppDir}");
         }
+
+
 
         #region 保存先リスト追加と削除
         //保存フォルダをリストに追加
@@ -1140,11 +1165,9 @@ namespace Pixcren
             encoder.Frames.Add(BitmapFrame.Create(bitmap, null, meta, null));
             try
             {
-                using (var fs = new System.IO.FileStream(
-                    fullPath, System.IO.FileMode.Create, System.IO.FileAccess.Write))
-                {
-                    encoder.Save(fs);
-                }
+                using var fs = new System.IO.FileStream(
+                    fullPath, System.IO.FileMode.Create, System.IO.FileAccess.Write);
+                encoder.Save(fs);
             }
             catch (Exception ex)
             {
@@ -1191,8 +1214,10 @@ namespace Pixcren
                     data.SetQuery("/XMP/XMP:CreatorTool", software);
                     break;
                 case ImageType.tiff:
-                    data = new BitmapMetadata("tiff");
-                    data.ApplicationName = software;
+                    data = new BitmapMetadata("tiff")
+                    {
+                        ApplicationName = software
+                    };
                     break;
                 default:
                     break;
@@ -1211,8 +1236,10 @@ namespace Pixcren
                 case ImageType.png:
                     return new PngBitmapEncoder();
                 case ImageType.jpg:
-                    var jpeg = new JpegBitmapEncoder();
-                    jpeg.QualityLevel = MyAppConfig.JpegQuality;
+                    var jpeg = new JpegBitmapEncoder
+                    {
+                        QualityLevel = MyAppConfig.JpegQuality
+                    };
                     return jpeg;
                 case ImageType.bmp:
                     return new BmpBitmapEncoder();
@@ -1374,15 +1401,13 @@ namespace Pixcren
         private void AddTextToComboBox(object sender, ObservableCollection<string> list)
         {
             var button = sender as Button;
-            ComboBox cb = button.Tag as ComboBox;
-            if (cb != null) AddTextToComboBox(cb.Text, list, cb);
+            if (button.Tag is ComboBox cb) AddTextToComboBox(cb.Text, list, cb);
         }
 
         private void RemoveComboBoxItem(object sender, ObservableCollection<string> list)
         {
             var b = sender as Button;
-            var combo = b.Tag as ComboBox;
-            if (combo != null)
+            if (b.Tag is ComboBox combo)
             {
                 RemoveComboBoxItem(combo, list);
             }
@@ -1433,8 +1458,7 @@ namespace Pixcren
 
         private void MyButtonAddSound_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new OpenFileDialog();
-            dialog.Filter = "(wav)|*.wav";
+            var dialog = new OpenFileDialog { Filter = "(wav)|*.wav" };
             if (dialog.ShowDialog() == true)
             {
                 AddTextToComboBox(dialog.FileName, MyAppConfig.SoundFilePathList, MyComboBoxSoundFilePath);
@@ -1534,6 +1558,8 @@ namespace Pixcren
         [DataMember] public int DirIndex { get; set; }
 
         [DataMember] public bool? IsDrawCursor { get; set; }//マウスカーソル描画の有無
+        [DataMember] public bool IsOutputToClipboardOnly { get; set; }//出力はクリップボードだけ
+
 
         //ホットキー
         [DataMember] public bool HotkeyAlt { get; set; }

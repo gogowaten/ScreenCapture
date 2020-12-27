@@ -6,7 +6,8 @@
         xmlns:local="clr-namespace:Pixcren"
         xmlns:myCtrl="clr-namespace:ControlLibraryCore20200620;assembly=ControlLibraryCore20200620"
         mc:Ignorable="d"
-        Title="MainWindow" Height="800" Width="550" ResizeMode="CanResizeWithGrip">
+        Title="MainWindow" Height="800" Width="550" ResizeMode="CanResizeWithGrip"
+        Top="{Binding Path=Top, Mode=TwoWay}" Left="{Binding Path=Left, Mode=TwoWay}">
   <Window.Resources>
     <Style TargetType="CheckBox">
       <Setter Property="VerticalAlignment" Value="Center"/>
@@ -46,6 +47,7 @@
     <!--<TabItem Header="キャプチャ">-->
     <StackPanel>
 
+      <Button Content="テストーーーーーーーーーーーー" Name="MyTestButton" Click="MyTestButton_Click"/>
       <Button x:Name="MyButtonSaveState" Content="設定保存" Click="MyButtonSaveState_Click"/>
       <Button x:Name="MyButtonLoadState" Content="設定読み込み" Click="MyButtonLoadState_Click"/>
       <Button x:Name="MyButtonSaveStateFile" Content="名前をつけて設定保存" Click="MyButtonSaveStateFile_Click"/>
@@ -56,27 +58,33 @@
                         SelectedValue="{Binding Path=RectType}"/>
       </DockPanel>
 
-      <CheckBox x:Name="MyCheckBoxIsDrawCursor" Content="マウスカーソル描画する" IsChecked="{Binding Path=IsDrawCursor}"/>
-      <Button Content="テストーーーーーーーーーーーー" Name="MyTestButton" Click="MyTestButton_Click"/>
-
-      <!--<StackPanel>-->
-      <StackPanel Orientation="Horizontal">
-        <TextBlock Text="画像形式"/>
-        <ComboBox Name="ComboBoxSaveFileType" SelectedItem="{Binding Path=ImageType}"/>
-        <myCtrl:NumericUpDown MyValue="{Binding Path=JpegQuality}" MyMinValue="1" MyMaxValue="100" MyStringFormat="jpeg画質 = 000"/>
-      </StackPanel>
-      <DockPanel>
-        <TextBlock Text="保存場所"/>
-        <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryDelete" Content="削除" Click="ButtonSaveDirectoryDelete_Click"/>
-        <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryAdd" Content="追加" Click="ButtonSaveDirectoryAdd_Click"/>
-        <ComboBox DockPanel.Dock="Right" Name="MyComboBoxSaveDirectory" 
+      <CheckBox x:Name="MyCheckBoxIsDrawCursor" Content="マウスカーソルを描画する" IsChecked="{Binding Path=IsDrawCursor}"/>
+      <GroupBox Header="出力、保存">
+        <StackPanel>
+          <StackPanel>
+            <CheckBox x:Name="MyCheckBoxIsOutputToClipboardOnly" Content="クリップボードにコピーだけする (保存はしない)"
+                      IsChecked="{Binding Path=IsOutputToClipboardOnly}"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal">            
+            <TextBlock Text="画像形式"/>
+            <ComboBox Name="ComboBoxSaveFileType" SelectedItem="{Binding Path=ImageType}"/>
+            <myCtrl:NumericUpDown MyValue="{Binding Path=JpegQuality}"
+                                  MyMinValue="1" MyMaxValue="100" MyStringFormat="jpeg画質 = 000"/>
+            <Button x:Name="MyButtonOpenSaveFolder" Content="保存場所を開く"
+                    Click="MyButtonOpenSaveFolder_Click" Margin="10,0"/>
+          </StackPanel>
+          <DockPanel>
+            <TextBlock Text="保存場所"/>
+            <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryDelete" Content="削除" Click="ButtonSaveDirectoryDelete_Click"/>
+            <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryAdd" Content="追加" Click="ButtonSaveDirectoryAdd_Click"/>
+            <ComboBox DockPanel.Dock="Right" Name="MyComboBoxSaveDirectory" 
                         ItemsSource="{Binding Path=DirList}"
                         SelectedValue="{Binding Path=Dir}"
                         SelectedIndex="{Binding Path=DirIndex}"
                         IsEditable="True"/>
-      </DockPanel>
-      <Button x:Name="MyButtonOpenSaveFolder" Content="保存場所を開く" Click="MyButtonOpenSaveFolder_Click"/>
-
+          </DockPanel>
+        </StackPanel>
+      </GroupBox>
       <GroupBox Header="ファイル名">
         <GroupBox.Resources>
           <local:StringFormatDigitConverter x:Key="MyStringFormatDigitConverter"/>
@@ -88,7 +96,7 @@
             <TextBox x:Name="MyTextBoxFileNameSmple" Text="確認ボタンを押すと、ここにファイル名表示"
                      IsReadOnly="True" VerticalContentAlignment="Center"/>
           </DockPanel>
-          <GroupBox Header="数値">
+          <GroupBox Header="数値" BorderBrush="Transparent">
             <StackPanel>
               <DockPanel>
                 <CheckBox Content="日時" x:Name="MyCheckBoxFileNameData" IsChecked="{Binding Path=IsFileNameDate}"/>
@@ -118,7 +126,7 @@
               </StackPanel>
             </StackPanel>
           </GroupBox>
-          <GroupBox Header="文字列">
+          <GroupBox Header="文字列" BorderBrush="Transparent">
             <StackPanel>
               <DockPanel>
                 <CheckBox Content="text1" IsChecked="{Binding Path=IsFileNameText1}"/>
@@ -178,7 +186,7 @@
           <!--<Button x:Name="MyButtonHotKeyRegist" Content="登録" Click="MyButtonHotKeyRegist_Click"/>-->
         </DockPanel>
       </GroupBox>
-      <!--</StackPanel>-->
+
       <GroupBox Header="キャプチャ時の音">
         <StackPanel>
           <StackPanel Orientation="Horizontal">
