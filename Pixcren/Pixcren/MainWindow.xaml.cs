@@ -324,49 +324,49 @@ namespace Pixcren
             MyInisializeComboBox();
 
 
-            var now = DateTime.Now;
+            //var now = DateTime.Now;
 
-            //            DateTimeFormatInfo.TimeSeparator プロパティ(System.Globalization) | Microsoft Docs
-            //https://docs.microsoft.com/ja-jp/dotnet/api/system.globalization.datetimeformatinfo.timeseparator?view=net-5.0
+            ////            DateTimeFormatInfo.TimeSeparator プロパティ(System.Globalization) | Microsoft Docs
+            ////https://docs.microsoft.com/ja-jp/dotnet/api/system.globalization.datetimeformatinfo.timeseparator?view=net-5.0
 
-            var cul = CultureInfo.CurrentCulture;
-            var dtformat = cul.DateTimeFormat;
-            var dname = cul.DisplayName;
-            var ename = cul.EnglishName;
-            var cname = cul.Name;
-            var tinfo = cul.TextInfo;
-            var culture = CultureInfo.CreateSpecificCulture(cul.Name);
-            var dtfInfo = culture.DateTimeFormat;
-            dtfInfo.TimeSeparator = "_";
-            dtfInfo.DateSeparator = "-";
-            var mySeparate = now.ToString("F", dtfInfo);
-            var mySeparate2 = now.ToString("G", dtfInfo);
+            //var cul = CultureInfo.CurrentCulture;
+            //var dtformat = cul.DateTimeFormat;
+            //var dname = cul.DisplayName;
+            //var ename = cul.EnglishName;
+            //var cname = cul.Name;
+            //var tinfo = cul.TextInfo;
+            //var culture = CultureInfo.CreateSpecificCulture(cul.Name);
+            //var dtfInfo = culture.DateTimeFormat;
+            //dtfInfo.TimeSeparator = "_";
+            //dtfInfo.DateSeparator = "-";
+            //var mySeparate = now.ToString("F", dtfInfo);
+            //var mySeparate2 = now.ToString("G", dtfInfo);
 
 
-            //            カスタム日時形式文字列 | Microsoft Docs
-            //https://docs.microsoft.com/ja-jp/dotnet/standard/base-types/custom-date-and-time-format-strings
-            var aa = now.ToLongDateString();
-            var bb = now.ToLongTimeString();
-            var cc = now.ToShortDateString();
-            var dd = now.ToString();
-            var ee = "fff";
-            var ff = now.ToString(ee);
-            now = new DateTime(2020, 1, 2, 3, 4, 5, 6);
-            var gg = now.ToString(ee);
-            var hh = now.ToString("F");
-            var ii = now.ToString("FF");
-            var jj = now.ToString("FFF");
-            var kk = now.ToString("f");
-            var ll = now.ToString("ff");
-            var mm = now.ToString("ffantasy");
-            var nn = now.ToString("mmx");
-            var oo = now.ToString("f\\fan\\ta\\s\\y");
-            var pp = now.ToString("HH'_'dd");
-            var str1 = "指定文字列1";
-            var str2 = "指定文字列2";
-            var rr = str1 + now.ToString("HH'_'dd") + str2;
-            var ss = now.ToString("O");
-            var tt = now.ToString("t");
+            ////            カスタム日時形式文字列 | Microsoft Docs
+            ////https://docs.microsoft.com/ja-jp/dotnet/standard/base-types/custom-date-and-time-format-strings
+            //var aa = now.ToLongDateString();
+            //var bb = now.ToLongTimeString();
+            //var cc = now.ToShortDateString();
+            //var dd = now.ToString();
+            //var ee = "fff";
+            //var ff = now.ToString(ee);
+            //now = new DateTime(2020, 1, 2, 3, 4, 5, 6);
+            //var gg = now.ToString(ee);
+            //var hh = now.ToString("F");
+            //var ii = now.ToString("FF");
+            //var jj = now.ToString("FFF");
+            //var kk = now.ToString("f");
+            //var ll = now.ToString("ff");
+            //var mm = now.ToString("ffantasy");
+            //var nn = now.ToString("mmx");
+            //var oo = now.ToString("f\\fan\\ta\\s\\y");
+            //var pp = now.ToString("HH'_'dd");
+            //var str1 = "指定文字列1";
+            //var str2 = "指定文字列2";
+            //var rr = str1 + now.ToString("HH'_'dd") + str2;
+            //var ss = now.ToString("O");
+            //var tt = now.ToString("t");
 
             //実行ファイルのバージョン取得
             var cl = Environment.GetCommandLineArgs();
@@ -1539,7 +1539,9 @@ namespace Pixcren
 
 
 
-
+    /// <summary>
+    /// アプリの設定値用クラス
+    /// </summary>
     [DataContract]
     public class AppConfig : System.ComponentModel.INotifyPropertyChanged
     {
@@ -1662,6 +1664,10 @@ namespace Pixcren
             if (SoundFilePathList == null) SoundFilePathList = new();
         }
     }
+
+
+
+
 
 
     public enum ImageType
