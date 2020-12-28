@@ -25,6 +25,10 @@ using System.Xml;
 using System.Collections.ObjectModel;
 using Microsoft.Win32;
 
+//スクショアプリできた！右クリックメニューを表示したエクセルもキャプチャできる - 午後わてんのブログ
+//https://gogowaten.hatenablog.com/entry/2020/12/28/165619
+
+
 namespace Pixcren
 {
     /// <summary>
