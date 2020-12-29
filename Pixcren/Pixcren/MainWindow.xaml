@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:Pixcren"
         xmlns:myCtrl="clr-namespace:ControlLibraryCore20200620;assembly=ControlLibraryCore20200620"
         mc:Ignorable="d"
-        Title="MainWindow" Height="800" Width="550" ResizeMode="CanResizeWithGrip"
+        Title="MainWindow" Height="840" Width="550" ResizeMode="CanResizeWithGrip"
         Top="{Binding Path=Top, Mode=TwoWay}" Left="{Binding Path=Left, Mode=TwoWay}">
   <Window.Resources>
     <Style TargetType="CheckBox">
@@ -25,6 +25,7 @@
     </Style>
     <Style TargetType="DockPanel">
       <Setter Property="Margin" Value="4"/>
+      <Setter Property="KeyboardNavigation.TabNavigation" Value="Local"/>
     </Style>
     <Style TargetType="TextBlock">
       <Setter Property="VerticalAlignment" Value="Center"/>
@@ -43,8 +44,6 @@
   </Window.Resources>
 
   <Grid UseLayoutRounding="True">
-    <!--<TabControl>-->
-    <!--<TabItem Header="キャプチャ">-->
     <StackPanel>
 
       <!--<Button Content="テストーーーーーーーーーーーー" Name="MyTestButton" Click="MyTestButton_Click"/>
@@ -59,13 +58,13 @@
       </DockPanel>
 
       <CheckBox x:Name="MyCheckBoxIsDrawCursor" Content="マウスカーソルを描画する" IsChecked="{Binding Path=IsDrawCursor}"/>
-      <GroupBox Header="出力、保存">
+      <GroupBox Header="出力、保存" BorderBrush="YellowGreen">
         <StackPanel>
           <StackPanel>
             <CheckBox x:Name="MyCheckBoxIsOutputToClipboardOnly" Content="クリップボードにコピーだけする (保存はしない)"
                       IsChecked="{Binding Path=IsOutputToClipboardOnly}"/>
           </StackPanel>
-          <StackPanel Orientation="Horizontal">            
+          <StackPanel Orientation="Horizontal">
             <TextBlock Text="画像形式"/>
             <ComboBox Name="ComboBoxSaveFileType" SelectedItem="{Binding Path=ImageType}"/>
             <myCtrl:NumericUpDown MyValue="{Binding Path=JpegQuality}"
@@ -75,9 +74,11 @@
           </StackPanel>
           <DockPanel>
             <TextBlock Text="保存場所"/>
-            <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryDelete" Content="削除" Click="ButtonSaveDirectoryDelete_Click"/>
-            <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryAdd" Content="追加" Click="ButtonSaveDirectoryAdd_Click"/>
-            <ComboBox DockPanel.Dock="Right" Name="MyComboBoxSaveDirectory" 
+            <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryDelete" Content="削除"
+                    Click="ButtonSaveDirectoryDelete_Click" IsTabStop="False"/>
+            <Button DockPanel.Dock="Right" x:Name="ButtonSaveDirectoryAdd" Content="追加"
+                    Click="ButtonSaveDirectoryAdd_Click" TabIndex="2"/>
+            <ComboBox DockPanel.Dock="Right" Name="MyComboBoxSaveDirectory" TabIndex="1"
                         ItemsSource="{Binding Path=DirList}"
                         SelectedValue="{Binding Path=Dir}"
                         SelectedIndex="{Binding Path=DirIndex}"
@@ -85,7 +86,7 @@
           </DockPanel>
         </StackPanel>
       </GroupBox>
-      <GroupBox Header="ファイル名">
+      <GroupBox Header="ファイル名" BorderBrush="LimeGreen">
         <GroupBox.Resources>
           <local:StringFormatDigitConverter x:Key="MyStringFormatDigitConverter"/>
         </GroupBox.Resources>
@@ -93,80 +94,105 @@
           <DockPanel>
             <TextBlock Text="見本" FontSize="20"/>
             <Button x:Name="MyButtonSample" Content="確認" Click="MyButtonSample_Click"/>
-            <TextBox x:Name="MyTextBoxFileNameSmple" Text="確認ボタンを押すと、ここにファイル名表示"
+            <TextBox x:Name="MyTextBoxFileNameSample" Text="確認ボタンを押すと、ここにファイル名表示"
                      IsReadOnly="True" VerticalContentAlignment="Center"/>
           </DockPanel>
           <GroupBox Header="数値" BorderBrush="Transparent">
             <StackPanel>
               <DockPanel>
-                <CheckBox Content="日時" x:Name="MyCheckBoxFileNameData" IsChecked="{Binding Path=IsFileNameDate}"/>
-                <ComboBox Name="MyComboBoxFileNameDateOrder" SelectedValue="{Binding Path=FileNameDateOrder}"/>
-                <Button DockPanel.Dock="Right" Content="削除" Click="MyButtonRemoveFileNameDateFromat_Click"
+                <CheckBox Content="日時" x:Name="MyCheckBoxFileNameData" TabIndex="1"
+                          IsChecked="{Binding Path=IsFileNameDate}"
+                          Click="CheckBox_Click"/>
+                <ComboBox Name="MyComboBoxFileNameDateOrder" SelectedValue="{Binding Path=FileNameDateOrder}" TabIndex="2"
+                          SelectionChanged="MyComboBox_SelectionChanged"/>
+                <Button DockPanel.Dock="Right" Content="削除" Click="MyButtonRemoveFileNameDateFromat_Click" IsTabStop="False"
                             Tag="{Binding ElementName=MyComboBoxFileNameDateFormat}"/>
-                <Button DockPanel.Dock="Right" Content="追加"
+                <Button DockPanel.Dock="Right" Content="追加" TabIndex="4"
                             Click="MyButtonAddFileNameDateFromat_Click" Tag="{Binding ElementName=MyComboBoxFileNameDateFormat}"/>
-                <ComboBox Name="MyComboBoxFileNameDateFormat" IsEditable="True"
-                                ItemsSource="{Binding Path=FileNameDateFormatList}"/>
+                <ComboBox Name="MyComboBoxFileNameDateFormat" IsEditable="True" TabIndex="3"
+                          ItemsSource="{Binding Path=FileNameDateFormatList}"
+                          SelectionChanged="MyComboBox_SelectionChanged"/>
               </DockPanel>
               <StackPanel Orientation="Horizontal">
-                <CheckBox Content="連番" IsChecked="{Binding Path=IsFileNameSerial}"/>
-                <ComboBox Name="MyComboBoxFileNameSerialOrder" SelectedValue="{Binding Path=FileNameSerialOrder}"/>
+                <CheckBox Content="連番" IsChecked="{Binding Path=IsFileNameSerial}"
+                          Click="CheckBox_Click"/>
+                <ComboBox Name="MyComboBoxFileNameSerialOrder" SelectedValue="{Binding Path=FileNameSerialOrder}"
+                          SelectionChanged="MyComboBox_SelectionChanged"/>
                 <myCtrl:NumericUpDown Name="MyNumericUpDownFileNameSerial"
-                                            MyValue="{Binding Path=FileNameSerial, Mode=TwoWay}"
-                                            MinWidth="100"
-                                            MyStringFormat="{Binding 
-                                            ElementName=MyNumericUpDownFileNameSerialDigit,
-                                            Path=MyValue, Converter={StaticResource MyStringFormatDigitConverter}}"/>
+                                      MyValue="{Binding Path=FileNameSerial, Mode=TwoWay}"
+                                      MinWidth="100"
+                                      MyStringFormat="{Binding 
+                                      ElementName=MyNumericUpDownFileNameSerialDigit,
+                                      Path=MyValue, Converter={StaticResource MyStringFormatDigitConverter}}"/>
                 <myCtrl:NumericUpDown Name="MyNumericUpDownFileNameSerialDigit" MyStringFormat="桁：0"
-                                              MinWidth="80" MySmallChange="1" MyLargeChange="1" MyMinValue="1" MyMaxValue="100"
-                                              MyValue="{Binding Path=FileNameSerialDigit}"/>
+                                      MinWidth="80" MySmallChange="1" MyLargeChange="1" MyMinValue="1" MyMaxValue="100"
+                                      MyValue="{Binding Path=FileNameSerialDigit}"/>
                 <myCtrl:NumericUpDown Name="MyNumericUpDownFileNameSerialIncreace" MyStringFormat="増加：0;増加：-0;増加：0"
-                                              MinWidth="100" MySmallChange="1" MyLargeChange="1"
-                                              MyValue="{Binding Path=FileNameSerialIncreace}"/>
+                                      MinWidth="100" MySmallChange="1" MyLargeChange="1"
+                                      MyValue="{Binding Path=FileNameSerialIncreace}"/>
               </StackPanel>
+              <Button x:Name="MyButtonHelpDateTimeStringformat" Content="日時の書式一覧ウィンドウ開く"
+                      Click="MyButtonHelpDateTimeStringformat_Click" Margin="10,8,10,0"/>
             </StackPanel>
           </GroupBox>
-          <GroupBox Header="文字列" BorderBrush="Transparent">
+          <GroupBox Header="文字列 (使用できない文字は半角の \ \ : * ? &quot; &lt; &gt; | )" BorderBrush="Transparent">
             <StackPanel>
               <DockPanel>
-                <CheckBox Content="text1" IsChecked="{Binding Path=IsFileNameText1}"/>
+                <CheckBox Content="text1" IsChecked="{Binding Path=IsFileNameText1}" TabIndex="1"
+                          Click="CheckBox_Click"/>
                 <Button DockPanel.Dock="Right" Content="削除" Tag="{Binding ElementName=MyComboBoxFileNameText1}"
-                            Click="MyButtonRemoveFileNameText1_Click"/>
-                <Button DockPanel.Dock="Right" Content="追加"
+                            Click="MyButtonRemoveFileNameText1_Click" IsTabStop="False"/>
+                <Button DockPanel.Dock="Right" Content="追加" TabIndex="3"
                             Click="MyButtonAddFileNameText1_Click" Tag="{Binding ElementName=MyComboBoxFileNameText1}"/>
-                <ComboBox DockPanel.Dock="Right" Name="MyComboBoxFileNameText1" IsEditable="True"
-                              ItemsSource="{Binding Path=FileNameText1List}"
-                              SelectedValue="{Binding Path=FileNameText1}"/>
+                <ComboBox DockPanel.Dock="Right" Name="MyComboBoxFileNameText1" IsEditable="True" TabIndex="2"
+                          ItemsSource="{Binding Path=FileNameText1List}"
+                          SelectedValue="{Binding Path=FileNameText1}"
+                          LostFocus="MyComboBoxFileNameText_LostFocus"
+                          Text="{Binding Path=FileNameText1}"
+                          PreviewKeyUp="MyComboBoxFileNameText_PreviewKeyUp"/>
               </DockPanel>
+             
               <DockPanel>
-                <CheckBox Content="text2" IsChecked="{Binding Path=IsFileNameText2}"/>
+                <CheckBox Content="text2" IsChecked="{Binding Path=IsFileNameText2}" TabIndex="1"
+                          Click="CheckBox_Click"/>
                 <Button DockPanel.Dock="Right" Content="削除" Click="MyButtonRemoveFileNameText2_Click"
-                            Tag="{Binding ElementName=MyComboBoxFileNameText2}"/>
-                <Button DockPanel.Dock="Right" Content="追加"
-                            Click="MyButtonAddFileNameText2_Click" Tag="{Binding ElementName=MyComboBoxFileNameText2}"/>
-                <ComboBox DockPanel.Dock="Right" Name="MyComboBoxFileNameText2" IsEditable="True"
-                              ItemsSource="{Binding Path=FileNameText2List}"
-                              SelectedValue="{Binding Path=FileNameText2}"/>
+                        Tag="{Binding ElementName=MyComboBoxFileNameText2}" IsTabStop="False"/>
+                <Button DockPanel.Dock="Right" Content="追加" TabIndex="3"
+                        Click="MyButtonAddFileNameText2_Click" Tag="{Binding ElementName=MyComboBoxFileNameText2}"/>
+                <ComboBox DockPanel.Dock="Right" Name="MyComboBoxFileNameText2" IsEditable="True" TabIndex="2"
+                          ItemsSource="{Binding Path=FileNameText2List}"
+                          SelectedValue="{Binding Path=FileNameText2}"
+                          LostFocus="MyComboBoxFileNameText_LostFocus"
+                          Text="{Binding Path=FileNameText2}"
+                          PreviewKeyUp="MyComboBoxFileNameText_PreviewKeyUp"/>
               </DockPanel>
               <DockPanel>
-                <CheckBox Content="text3" IsChecked="{Binding Path=IsFileNameText3}"/>
+                <CheckBox Content="text3" IsChecked="{Binding Path=IsFileNameText3}" TabIndex="1"
+                          Click="CheckBox_Click"/>
                 <Button DockPanel.Dock="Right" Content="削除" Click="MyButtonRemoveFileNameText3_Click"
-                            Tag="{Binding ElementName=MyComboBoxFileNameText3}"/>
-                <Button DockPanel.Dock="Right" Content="追加"
-                            Click="MyButtonAddFileNameText3_Click" Tag="{Binding ElementName=MyComboBoxFileNameText3}"/>
-                <ComboBox DockPanel.Dock="Right" Name="MyComboBoxFileNameText3" IsEditable="True"
-                              ItemsSource="{Binding Path=FileNameText3List}"
-                              SelectedValue="{Binding Path=FileNameText3}"/>
+                        Tag="{Binding ElementName=MyComboBoxFileNameText3}" IsTabStop="False"/>
+                <Button DockPanel.Dock="Right" Content="追加" TabIndex="3"
+                        Click="MyButtonAddFileNameText3_Click" Tag="{Binding ElementName=MyComboBoxFileNameText3}"/>
+                <ComboBox DockPanel.Dock="Right" Name="MyComboBoxFileNameText3" IsEditable="True" TabIndex="2"
+                          ItemsSource="{Binding Path=FileNameText3List}"
+                          SelectedValue="{Binding Path=FileNameText3}"
+                          LostFocus="MyComboBoxFileNameText_LostFocus"
+                          Text="{Binding Path=FileNameText3}"
+                          PreviewKeyUp="MyComboBoxFileNameText_PreviewKeyUp"/>
               </DockPanel>
               <DockPanel>
-                <CheckBox Content="text4" IsChecked="{Binding Path=IsFileNameText4}"/>
+                <CheckBox Content="text4" IsChecked="{Binding Path=IsFileNameText4}" TabIndex="1"
+                          Click="CheckBox_Click"/>
                 <Button DockPanel.Dock="Right" Content="削除" Click="MyButtonRemoveFileNameText4_Click"
-                            Tag="{Binding ElementName=MyComboBoxFileNameText4}"/>
-                <Button DockPanel.Dock="Right" Content="追加"
-                            Click="MyButtonAddFileNameText4_Click" Tag="{Binding ElementName=MyComboBoxFileNameText4}"/>
-                <ComboBox DockPanel.Dock="Right" Name="MyComboBoxFileNameText4" IsEditable="True"
-                              ItemsSource="{Binding Path=FileNameText4List}"
-                              SelectedValue="{Binding Path=FileNameText4}"/>
+                        Tag="{Binding ElementName=MyComboBoxFileNameText4}" IsTabStop="False"/>
+                <Button DockPanel.Dock="Right" Content="追加" TabIndex="3"
+                        Click="MyButtonAddFileNameText4_Click" Tag="{Binding ElementName=MyComboBoxFileNameText4}"/>
+                <ComboBox DockPanel.Dock="Right" Name="MyComboBoxFileNameText4" IsEditable="True" TabIndex="2"
+                          ItemsSource="{Binding Path=FileNameText4List}"
+                          SelectedValue="{Binding Path=FileNameText4}"
+                          LostFocus="MyComboBoxFileNameText_LostFocus"
+                          Text="{Binding Path=FileNameText4}"
+                          PreviewKeyUp="MyComboBoxFileNameText_PreviewKeyUp"/>
               </DockPanel>
             </StackPanel>
           </GroupBox>
@@ -180,41 +206,35 @@
           <CheckBox Content="Shift +" x:Name="MyCheckShift" IsChecked="{Binding Path=HotkeyShift}"/>
           <CheckBox Content="Win +" x:Name="MyCheckWin" IsChecked="{Binding Path=HotkeyWin}"/>
           <ComboBox Name="MyComboBoxHotKey" IsEditable="True"
-                          SelectedValue="{Binding Path=HotKey}"
-                          PreviewKeyDown="MyComboBoxHotKey_PreviewKeyDown"
-                          PreviewKeyUp="MyComboBoxHotKey_PreviewKeyUp"/>
-          <!--<Button x:Name="MyButtonHotKeyRegist" Content="登録" Click="MyButtonHotKeyRegist_Click"/>-->
+                    SelectedValue="{Binding Path=HotKey}"
+                    PreviewKeyDown="MyComboBoxHotKey_PreviewKeyDown"
+                    PreviewKeyUp="MyComboBoxHotKey_PreviewKeyUp"/>
         </DockPanel>
       </GroupBox>
 
-      <GroupBox Header="キャプチャ時の音">
+      <GroupBox Header="キャプチャ時の音" BorderBrush="ForestGreen">
         <StackPanel>
           <StackPanel Orientation="Horizontal">
             <ComboBox Name="MyComboBoxSoundType" DisplayMemberPath="Value" SelectedValuePath="Key"
-                        SelectedValue="{Binding Path=MySoundPlay}"/>
+                      SelectedValue="{Binding Path=MySoundPlay}"/>
             <Button x:Name="MyButtonSound" Content="試聴" Click="MyButtonSound_Click"/>
           </StackPanel>
           <StackPanel>
             <DockPanel>
               <TextBlock Text="指定" VerticalAlignment="Center"/>
               <Button DockPanel.Dock="Right" Content="削除" Click="MyButtonRemoveSound_Click"
-                            Tag="{Binding ElementName=MyComboBoxSoundFilePath}"/>
-              <Button DockPanel.Dock="Right" Content="追加"
-                            Click="MyButtonAddSound_Click" Tag="{Binding ElementName=MyComboBoxSoundFilePath}"/>
-              <ComboBox Name="MyComboBoxSoundFilePath" ItemsSource="{Binding Path=SoundFilePathList}"
-                            SelectedValue="{Binding Path=SoundFilePath}"
-                            SelectionChanged="MyComboBoxSoundFilePath_SelectionChanged"/>
+                      Tag="{Binding ElementName=MyComboBoxSoundFilePath}" IsTabStop="False"/>
+              <Button DockPanel.Dock="Right" Content="追加" TabIndex="2"
+                      Click="MyButtonAddSound_Click" Tag="{Binding ElementName=MyComboBoxSoundFilePath}"/>
+              <ComboBox Name="MyComboBoxSoundFilePath" TabIndex="1"
+                        ItemsSource="{Binding Path=SoundFilePathList}"
+                        SelectedValue="{Binding Path=SoundFilePath}"
+                        SelectionChanged="MyComboBoxSoundFilePath_SelectionChanged"/>
             </DockPanel>
           </StackPanel>
 
         </StackPanel>
       </GroupBox>
     </StackPanel>
-    <!--</TabItem>-->
-
-    <!--<TabItem Header="保存">
-      </TabItem>
-
-    </TabControl>-->
   </Grid>
 </Window>

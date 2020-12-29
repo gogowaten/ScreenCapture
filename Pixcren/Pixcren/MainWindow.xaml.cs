@@ -17,7 +17,7 @@ using System.Windows.Shapes;
 
 using System.Runtime.InteropServices;//Imagingで使っている
 using System.Windows.Interop;//CreateBitmapSourceFromHBitmapで使っている
-using System.Windows.Threading;//DispatcherTimerで使っている
+//using System.Windows.Threading;//DispatcherTimerで使っている
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.Serialization;
@@ -319,6 +319,9 @@ namespace Pixcren
         private System.Media.SoundPlayer MySoundOrder;//指定の音
         private System.Media.SoundPlayer MySoundDefault;//規定の内蔵音源
 
+        //日時の書式ウィンドウ表示してる？
+        public bool IsDateformatShow;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -329,9 +332,10 @@ namespace Pixcren
 
 
             //var now = DateTime.Now;
+            //now.ToString("")
 
-            ////            DateTimeFormatInfo.TimeSeparator プロパティ(System.Globalization) | Microsoft Docs
-            ////https://docs.microsoft.com/ja-jp/dotnet/api/system.globalization.datetimeformatinfo.timeseparator?view=net-5.0
+            //            DateTimeFormatInfo.TimeSeparator プロパティ(System.Globalization) | Microsoft Docs
+            //https://docs.microsoft.com/ja-jp/dotnet/api/system.globalization.datetimeformatinfo.timeseparator?view=net-5.0
 
             //var cul = CultureInfo.CurrentCulture;
             //var dtformat = cul.DateTimeFormat;
@@ -347,30 +351,8 @@ namespace Pixcren
             //var mySeparate2 = now.ToString("G", dtfInfo);
 
 
-            ////            カスタム日時形式文字列 | Microsoft Docs
-            ////https://docs.microsoft.com/ja-jp/dotnet/standard/base-types/custom-date-and-time-format-strings
-            //var aa = now.ToLongDateString();
-            //var bb = now.ToLongTimeString();
-            //var cc = now.ToShortDateString();
-            //var dd = now.ToString();
-            //var ee = "fff";
-            //var ff = now.ToString(ee);
-            //now = new DateTime(2020, 1, 2, 3, 4, 5, 6);
-            //var gg = now.ToString(ee);
-            //var hh = now.ToString("F");
-            //var ii = now.ToString("FF");
-            //var jj = now.ToString("FFF");
-            //var kk = now.ToString("f");
-            //var ll = now.ToString("ff");
-            //var mm = now.ToString("ffantasy");
-            //var nn = now.ToString("mmx");
-            //var oo = now.ToString("f\\fan\\ta\\s\\y");
-            //var pp = now.ToString("HH'_'dd");
-            //var str1 = "指定文字列1";
-            //var str2 = "指定文字列2";
-            //var rr = str1 + now.ToString("HH'_'dd") + str2;
-            //var ss = now.ToString("O");
-            //var tt = now.ToString("t");
+            //            カスタム日時形式文字列 | Microsoft Docs
+            //https://docs.microsoft.com/ja-jp/dotnet/standard/base-types/custom-date-and-time-format-strings
 
             //実行ファイルのバージョン取得
             var cl = Environment.GetCommandLineArgs();
@@ -408,11 +390,48 @@ namespace Pixcren
                 MyComboBoxSaveDirectory.Text = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             }
 
-            //タイトルバー
+            //タイトル
             this.Title = AppName + AppVersion;
 
-
+            
         }
+
+        private void MyComboBoxFileNameText_PreviewKeyUp(object sender, KeyEventArgs e)
+        {            
+            var cb = sender as ComboBox;
+            char[] invalid = System.IO.Path.GetInvalidFileNameChars();
+            string text = cb.Text;
+            if (string.IsNullOrWhiteSpace(text)) return;
+
+            if (text.IndexOfAny(invalid) < 0)
+            {
+                cb.Foreground = SystemColors.ControlTextBrush;
+                
+            }
+            else
+            {
+                cb.Foreground = Brushes.Red;
+            }
+            UpdateFileNameSample();
+       }
+
+        private void MyComboBoxFileNameText_LostFocus(object sender, RoutedEventArgs e)
+        {
+            UpdateFileNameSample();
+        }
+
+      
+
+        private void MyComboBox_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+            UpdateFileNameSample();
+        }
+      
+        private void CheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateFileNameSample();
+        }
+
 
         //アプリ終了時
         private void MainWindow_Closed(object sender, EventArgs e)
@@ -665,11 +684,7 @@ namespace Pixcren
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            //MyTimer = new DispatcherTimer();
-            //MyTimer.Interval = new TimeSpan(0, 0, 0, 0, 100);
-            //MyTimer.Tick += MyTimer_Tick;
-            //MyTimer.Start();
-
+           
             //MyComboBoxHotKey.SelectionChanged += (s, e) => { vHotKey = KeyInterop.VirtualKeyFromKey(MyAppConfig.HotKey); };
             MyComboBoxHotKey.SelectionChanged += (s, e) => { ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1); };
 
@@ -1379,8 +1394,13 @@ namespace Pixcren
 
         private void MyButtonSample_Click(object sender, RoutedEventArgs e)
         {
-            MyTextBoxFileNameSmple.Text = MakeFileName() + "." + MyAppConfig.ImageType.ToString();
+            UpdateFileNameSample();
         }
+        private void UpdateFileNameSample()
+        {
+            MyTextBoxFileNameSample.Text = MakeFileName() + "." + MyAppConfig.ImageType.ToString();
+        }
+       
 
         private void MyButtonAddFileNameText1_Click(object sender, RoutedEventArgs e)
         {
@@ -1534,9 +1554,18 @@ namespace Pixcren
             }
         }
 
+
+
         #endregion キャプチャ時の音関係
 
-
+        private void MyButtonHelpDateTimeStringformat_Click(object sender, RoutedEventArgs e)
+        {
+            if (IsDateformatShow) return;
+            WindowDateTimeStringformat window = new WindowDateTimeStringformat();
+            window.Owner = this;
+            window.Show();
+            IsDateformatShow = true;
+        }
     }
 
 
@@ -1757,4 +1786,29 @@ namespace Pixcren
     }
 
 
+
+
+    //    WPF/XAML : TextBox の入力内容を検証して不正入力の場合にエラーを表示する - i++
+    //http://increment.hatenablog.com/entry/2015/08/09/172433
+
+    //    ファイル名に使用できない文字列が含まれていないか調べる - .NET Tips(VB.NET, C#...)
+    //https://dobon.net/vb/dotnet/file/invalidpathchars.html
+
+    public class MyValidationRuleFileName : ValidationRule
+    {
+        public override ValidationResult Validate(object value, CultureInfo cultureInfo)
+        {
+            char[] invalid = System.IO.Path.GetInvalidFileNameChars();
+            string name = value as string;
+            if (name.IndexOfAny(invalid) > 0)
+            {
+                return new ValidationResult(false, "Invalid FileName");
+            }
+            else
+            {
+                return new ValidationResult(true, null);
+            }
+
+        }
+    }
 }
