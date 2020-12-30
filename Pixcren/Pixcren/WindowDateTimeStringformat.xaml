@@ -6,68 +6,77 @@
         xmlns:local="clr-namespace:Pixcren"
         mc:Ignorable="d"
         Title="WindowDateTimeStringformat" Height="450" Width="1000">
-  <Grid>
+  <Grid UseLayoutRounding="True">
     <!--<Grid.ColumnDefinitions>
       <ColumnDefinition/>
       <ColumnDefinition/>
     </Grid.ColumnDefinitions>-->
-    <StackPanel Orientation="Horizontal">
-      <ListBox x:Name="MyListBoxYMD" ItemsSource="{Binding}">
-        <ListBox.ItemTemplate>
-          <DataTemplate>
-            <StackPanel Orientation="Horizontal">
-              <TextBlock Width="80" Text="{Binding Path=Key}"/>
-              <TextBlock Text="{Binding Path=Value}"/>
-            </StackPanel>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-      <ListBox x:Name="MyListBoxHMS" ItemsSource="{Binding}">
-        <ListBox.ItemTemplate>
-          <DataTemplate>
-            <StackPanel Orientation="Horizontal">
-              <TextBlock Width="80" Text="{Binding Path=Key}"/>
-              <TextBlock Text="{Binding Path=Value}"/>
-            </StackPanel>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-      <ListBox x:Name="MyListBox" ItemsSource="{Binding}">
-        <ListBox.ItemTemplate>
-          <DataTemplate>
-            <StackPanel Orientation="Horizontal">
-              <TextBlock Width="40" Text="{Binding Path=Key}"/>
-              <TextBlock Text="{Binding Path=Value}"/>
-            </StackPanel>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-    
- 
-      
-      <ListBox x:Name="MyListBoxNG" ItemsSource="{Binding}">
-        <ListBox.ItemTemplate>
-          <DataTemplate>
-            <StackPanel Orientation="Horizontal">
-              <TextBlock Width="60" Text="{Binding Path=Key}"/>
-              <TextBlock Text="{Binding Path=Value}"/>
-            </StackPanel>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-      <ListBox x:Name="MyListBoxNG2" ItemsSource="{Binding}">
-        <ListBox.ItemTemplate>
-          <DataTemplate>
-            <StackPanel Orientation="Horizontal">
-              <TextBlock Width="60" Text="{Binding Path=Key}"/>
-              <TextBlock Text="{Binding Path=Value}"/>
-            </StackPanel>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-      
-      
-    </StackPanel>
-    
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+    <DockPanel>
+      <StackPanel Orientation="Horizontal">
+        <ListBox x:Name="MyListBoxYMD" ItemsSource="{Binding}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Width="80" Text="{Binding Path=Key}"/>
+                <TextBlock Text="{Binding Path=Value}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <ListBox x:Name="MyListBoxHMS" ItemsSource="{Binding}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Width="80" Text="{Binding Path=Key}"/>
+                <TextBlock Text="{Binding Path=Value}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <ListBox x:Name="MyListBox" ItemsSource="{Binding}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Width="40" Text="{Binding Path=Key}"/>
+                <TextBlock Text="{Binding Path=Value}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+
+
+
+        <ListBox x:Name="MyListBoxNG" ItemsSource="{Binding}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Width="60" Text="{Binding Path=Key}"/>
+                <TextBlock Text="{Binding Path=Value}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <ListBox x:Name="MyListBoxNG2" ItemsSource="{Binding}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Width="60" Text="{Binding Path=Key}"/>
+                <TextBlock Text="{Binding Path=Value}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+
+
+      </StackPanel>
+      <!--<Viewbox Stretch="None">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+          <Image x:Name="MyImage" Stretch="None"/>
+        </ScrollViewer>
+      </Viewbox>-->
+        <Image x:Name="MyImage" Stretch="None"/>
+      </DockPanel>
+    </ScrollViewer>
   </Grid>
 </Window>

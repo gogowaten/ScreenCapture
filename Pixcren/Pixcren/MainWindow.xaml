@@ -104,26 +104,29 @@
                           IsChecked="{Binding Path=IsFileNameDate}"
                           Click="CheckBox_Click"/>
                 <ComboBox Name="MyComboBoxFileNameDateOrder" SelectedValue="{Binding Path=FileNameDateOrder}" TabIndex="2"
-                          SelectionChanged="MyComboBox_SelectionChanged"/>
+                          SelectionChanged="MyComboBoxFileNameOrder_SelectionChanged"/>
                 <Button DockPanel.Dock="Right" Content="削除" Click="MyButtonRemoveFileNameDateFromat_Click" IsTabStop="False"
                             Tag="{Binding ElementName=MyComboBoxFileNameDateFormat}"/>
                 <Button DockPanel.Dock="Right" Content="追加" TabIndex="4"
                             Click="MyButtonAddFileNameDateFromat_Click" Tag="{Binding ElementName=MyComboBoxFileNameDateFormat}"/>
                 <ComboBox Name="MyComboBoxFileNameDateFormat" IsEditable="True" TabIndex="3"
                           ItemsSource="{Binding Path=FileNameDateFormatList}"
-                          SelectionChanged="MyComboBox_SelectionChanged"/>
+                          Text="{Binding Path=FileNameDataFormat}"
+                          SelectionChanged="MyComboBoxFileNameDateFormat_SelectionChanged"
+                          PreviewKeyUp="MyComboBoxFileNameDateFormat_PreviewKeyUp"/>
               </DockPanel>
               <StackPanel Orientation="Horizontal">
                 <CheckBox Content="連番" IsChecked="{Binding Path=IsFileNameSerial}"
                           Click="CheckBox_Click"/>
                 <ComboBox Name="MyComboBoxFileNameSerialOrder" SelectedValue="{Binding Path=FileNameSerialOrder}"
-                          SelectionChanged="MyComboBox_SelectionChanged"/>
+                          SelectionChanged="MyComboBoxFileNameOrder_SelectionChanged"/>
                 <myCtrl:NumericUpDown Name="MyNumericUpDownFileNameSerial"
                                       MyValue="{Binding Path=FileNameSerial, Mode=TwoWay}"
                                       MinWidth="100"
                                       MyStringFormat="{Binding 
                                       ElementName=MyNumericUpDownFileNameSerialDigit,
                                       Path=MyValue, Converter={StaticResource MyStringFormatDigitConverter}}"/>
+                <Button x:Name="MyButtonSerialReset" Content="0" Click="MyButtonSerialReset_Click" ToolTip="開始値を0にリセット"/>
                 <myCtrl:NumericUpDown Name="MyNumericUpDownFileNameSerialDigit" MyStringFormat="桁：0"
                                       MinWidth="80" MySmallChange="1" MyLargeChange="1" MyMinValue="1" MyMaxValue="100"
                                       MyValue="{Binding Path=FileNameSerialDigit}"/>
@@ -149,7 +152,8 @@
                           SelectedValue="{Binding Path=FileNameText1}"
                           LostFocus="MyComboBoxFileNameText_LostFocus"
                           Text="{Binding Path=FileNameText1}"
-                          PreviewKeyUp="MyComboBoxFileNameText_PreviewKeyUp"/>
+                          PreviewKeyUp="MyComboBoxFileNameText_PreviewKeyUp"
+                          SelectionChanged="MyComboBoxFileNameText_SelectionChanged"/>
               </DockPanel>
              
               <DockPanel>
@@ -164,7 +168,8 @@
                           SelectedValue="{Binding Path=FileNameText2}"
                           LostFocus="MyComboBoxFileNameText_LostFocus"
                           Text="{Binding Path=FileNameText2}"
-                          PreviewKeyUp="MyComboBoxFileNameText_PreviewKeyUp"/>
+                          PreviewKeyUp="MyComboBoxFileNameText_PreviewKeyUp"
+                          SelectionChanged="MyComboBoxFileNameText_SelectionChanged"/>
               </DockPanel>
               <DockPanel>
                 <CheckBox Content="text3" IsChecked="{Binding Path=IsFileNameText3}" TabIndex="1"
@@ -178,7 +183,8 @@
                           SelectedValue="{Binding Path=FileNameText3}"
                           LostFocus="MyComboBoxFileNameText_LostFocus"
                           Text="{Binding Path=FileNameText3}"
-                          PreviewKeyUp="MyComboBoxFileNameText_PreviewKeyUp"/>
+                          PreviewKeyUp="MyComboBoxFileNameText_PreviewKeyUp"
+                          SelectionChanged="MyComboBoxFileNameText_SelectionChanged"/>
               </DockPanel>
               <DockPanel>
                 <CheckBox Content="text4" IsChecked="{Binding Path=IsFileNameText4}" TabIndex="1"
@@ -192,7 +198,8 @@
                           SelectedValue="{Binding Path=FileNameText4}"
                           LostFocus="MyComboBoxFileNameText_LostFocus"
                           Text="{Binding Path=FileNameText4}"
-                          PreviewKeyUp="MyComboBoxFileNameText_PreviewKeyUp"/>
+                          PreviewKeyUp="MyComboBoxFileNameText_PreviewKeyUp"
+                          SelectionChanged="MyComboBoxFileNameText_SelectionChanged"/>
               </DockPanel>
             </StackPanel>
           </GroupBox>

@@ -9,9 +9,13 @@
     <Authors>gogowaten</Authors>
     <Description>スクリーンショット撮影、画面キャプチャ</Description>
     <Copyright>午後わてん</Copyright>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
+    <Version>1.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="DatetimeToStringFormat.png" />
     <None Remove="pekowave2.wav" />
   </ItemGroup>
 
@@ -22,7 +26,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="DatetimeToStringFormat.png" />
     <EmbeddedResource Include="pekowave2.wav" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
 
 </Project>

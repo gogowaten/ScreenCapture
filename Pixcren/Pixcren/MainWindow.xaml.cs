@@ -78,7 +78,7 @@ namespace Pixcren
         //private static extern IntPtr GetActiveWindow();
 
         //ウィンドウ名取得
-        [DllImport("user32.dll")]
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern int GetWindowText(IntPtr hWin, StringBuilder lpString, int nMaxCount);
 
         //最前面ウィンドウのハンドル取得
@@ -322,6 +322,12 @@ namespace Pixcren
         //日時の書式ウィンドウ表示してる？
         public bool IsDateformatShow;
 
+        //datetime.tostringの書式、これを既定値にする
+        private const string DATE_TIME_STRING_FORMAT = "yyyyMMdd'_'HH'_'mm'_'ss'_'fff";
+        //日時の書式一覧画像
+        private BitmapSource MyDateTimeStringFormatBitmapSource;
+
+
         public MainWindow()
         {
             InitializeComponent();
@@ -363,10 +369,15 @@ namespace Pixcren
             AppDir = Environment.CurrentDirectory;//.NET5より使用可能            
 
             //鳴らす音設定、内蔵音源セット。指定音源は初期化
+            //リソースから取り出す
             MySoundDefault = new System.Media.SoundPlayer(
                 System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("Pixcren.pekowave2.wav"));
             MySoundOrder = new System.Media.SoundPlayer();
 
+            //日時の書式一覧画像をリソースから取り出して設定
+            MyDateTimeStringFormatBitmapSource =
+                BitmapFrame.Create(System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(
+                    "Pixcren.DatetimeToStringFormat.png"), BitmapCreateOptions.None, BitmapCacheOption.Default);
 
             //設定ファイルが存在すれば読み込んで適用、なければ初期化して適用
             string configPath = AppDir + "\\" + APP_CONFIG_FILE_NAME;
@@ -381,6 +392,7 @@ namespace Pixcren
             }
             this.DataContext = MyAppConfig;
 
+
             //ホットキー登録
             ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1);
 
@@ -393,40 +405,47 @@ namespace Pixcren
             //タイトル
             this.Title = AppName + AppVersion;
 
-            
+
         }
 
         private void MyComboBoxFileNameText_PreviewKeyUp(object sender, KeyEventArgs e)
-        {            
-            var cb = sender as ComboBox;
-            char[] invalid = System.IO.Path.GetInvalidFileNameChars();
-            string text = cb.Text;
-            if (string.IsNullOrWhiteSpace(text)) return;
-
-            if (text.IndexOfAny(invalid) < 0)
+        {
+            if (sender is not ComboBox cb) return;
+            if (string.IsNullOrWhiteSpace(cb.Text)) return;
+            //無効なファイル名なら枠色を赤にする
+            if (CheckFileNameValidid(cb.Text))
             {
                 cb.Foreground = SystemColors.ControlTextBrush;
-                
             }
             else
             {
                 cb.Foreground = Brushes.Red;
             }
+            //見本ファイル名の表示更新
             UpdateFileNameSample();
-       }
+        }
+
+        /// <summary>
+        /// ファイル名に使える文字列ならtrueを返す
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        private bool CheckFileNameValidid(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return false;
+            char[] invalid = System.IO.Path.GetInvalidFileNameChars();
+            return name.IndexOfAny(invalid) < 0;
+        }
 
         private void MyComboBoxFileNameText_LostFocus(object sender, RoutedEventArgs e)
         {
             UpdateFileNameSample();
         }
 
-      
 
-        private void MyComboBox_SelectionChanged(object sender, RoutedEventArgs e)
-        {
-            UpdateFileNameSample();
-        }
-      
+
+
+
         private void CheckBox_Click(object sender, RoutedEventArgs e)
         {
             UpdateFileNameSample();
@@ -596,13 +615,23 @@ namespace Pixcren
                 //ファイルに保存
                 else
                 {
-                    string fullPath = MakeFullPath(directory, MakeFileName(), MyAppConfig.ImageType.ToString());
-                    //string fullPath = MakeFullPath(neko, MakeStringNowTime(), MyAppConfig.ImageType.ToString());
-                    SaveBitmap(bitmap, fullPath);
-                    //連番に加算
-                    if (MyAppConfig.IsFileNameSerial) AddIncrementToSerial();
-                    //音
-                    PlayMySound();
+                    //有効なファイル名なら続行
+                    string fileName = MakeFileName();
+                    if (CheckFileNameValidid(fileName))
+                    {
+                        string fullPath = MakeFullPath(directory, MakeFileName(), MyAppConfig.ImageType.ToString());
+
+                        SaveBitmap(bitmap, fullPath);
+                        //連番に加算
+                        if (MyAppConfig.IsFileNameSerial) AddIncrementToSerial();
+                        //音
+                        PlayMySound();
+                    }
+                    else
+                    {
+                        MessageBox.Show("ファイル名に使えない文字が指定されていたので保存できなかった");
+                    }
+
                 }
 
             }
@@ -684,7 +713,7 @@ namespace Pixcren
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-           
+
             //MyComboBoxHotKey.SelectionChanged += (s, e) => { vHotKey = KeyInterop.VirtualKeyFromKey(MyAppConfig.HotKey); };
             MyComboBoxHotKey.SelectionChanged += (s, e) => { ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1); };
 
@@ -692,6 +721,10 @@ namespace Pixcren
             MyCheckCtrl.Click += MyCheckModKey_Click;
             MyCheckShift.Click += MyCheckModKey_Click;
             MyCheckWin.Click += MyCheckModKey_Click;
+
+
+            //ファイル名の見本の表示更新
+            UpdateFileNameSample();
         }
 
         private void MyCheckModKey_Click(object sender, RoutedEventArgs e)
@@ -1079,7 +1112,6 @@ namespace Pixcren
             if (string.IsNullOrWhiteSpace(text)) return;
             if (string.IsNullOrEmpty(text)) return;
 
-
             int itemIndex = stringList.IndexOf(text);
             //リストにないパスの場合は普通に追加
             if (itemIndex == -1)
@@ -1277,7 +1309,7 @@ namespace Pixcren
             DateTime dt = DateTime.Now;
             //string str = dt.ToString("yyyyMMdd");            
             //string str = dt.ToString("yyyyMMdd" + "_" + "HHmmssfff");
-            string str = dt.ToString("yyyyMMdd'_'HH'_'mm'_'ss'_'fff");
+            string str = dt.ToString(DATE_TIME_STRING_FORMAT);
             //string str = dt.ToString("yyyyMMdd" + "_" + "HH" + "_" + "mm" + "_" + "ss" + "_" + "fff");
             return str;
         }
@@ -1327,8 +1359,16 @@ namespace Pixcren
                     }
                     else
                     {
-                        fileName += dateTime.ToString(MyComboBoxFileNameDateFormat.Text);
-                        isOverDate = true;
+                        try
+                        {
+                            fileName += dateTime.ToString(MyComboBoxFileNameDateFormat.Text);
+                            isOverDate = true;
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+
                     }
                 }
 
@@ -1398,35 +1438,57 @@ namespace Pixcren
         }
         private void UpdateFileNameSample()
         {
-            MyTextBoxFileNameSample.Text = MakeFileName() + "." + MyAppConfig.ImageType.ToString();
+            string fileName = MakeFileName() + "." + MyAppConfig.ImageType.ToString();
+            MyTextBoxFileNameSample.Text = fileName;
+            if (CheckFileNameValidid(fileName))
+            {
+                MyTextBoxFileNameSample.Foreground = SystemColors.ControlTextBrush;
+            }
+            else
+            {
+                MyTextBoxFileNameSample.Foreground = Brushes.Red;
+            }
         }
-       
+
 
         private void MyButtonAddFileNameText1_Click(object sender, RoutedEventArgs e)
         {
-            AddTextToComboBox(sender, MyAppConfig.FileNameText1List);
+            AddFileNameToComboBox(sender, MyAppConfig.FileNameText1List);
+        }
+        private void AddFileNameToComboBox(object sender, ObservableCollection<string> list)
+        {
+            var button = sender as Button;
+            if (button.Tag is ComboBox cb)
+            {
+                if (CheckFileNameValidid(cb.Text))
+                {
+                    AddTextToComboBox(cb.Text, list, cb);
+                }
+                else
+                {
+                    MessageBox.Show("ファイル名に使えない文字列があったので追加できなかった");
+                }
+            }
+
+
+
         }
 
         private void MyButtonAddFileNameText2_Click(object sender, RoutedEventArgs e)
         {
-            AddTextToComboBox(sender, MyAppConfig.FileNameText2List);
+            AddFileNameToComboBox(sender, MyAppConfig.FileNameText2List);
         }
 
         private void MyButtonAddFileNameText3_Click(object sender, RoutedEventArgs e)
         {
-            AddTextToComboBox(sender, MyAppConfig.FileNameText3List);
+            AddFileNameToComboBox(sender, MyAppConfig.FileNameText3List);
         }
 
         private void MyButtonAddFileNameText4_Click(object sender, RoutedEventArgs e)
         {
-            AddTextToComboBox(sender, MyAppConfig.FileNameText4List);
+            AddFileNameToComboBox(sender, MyAppConfig.FileNameText4List);
         }
 
-        private void AddTextToComboBox(object sender, ObservableCollection<string> list)
-        {
-            var button = sender as Button;
-            if (button.Tag is ComboBox cb) AddTextToComboBox(cb.Text, list, cb);
-        }
 
         private void RemoveComboBoxItem(object sender, ObservableCollection<string> list)
         {
@@ -1459,7 +1521,33 @@ namespace Pixcren
 
         private void MyButtonAddFileNameDateFromat_Click(object sender, RoutedEventArgs e)
         {
-            AddTextToComboBox(sender, MyAppConfig.FileNameDateFormatList);
+            if (CheckDateTimeStringFormat(MyComboBoxFileNameDateFormat.Text))
+            {
+                AddTextToComboBox(sender, MyAppConfig.FileNameDateFormatList);
+            }
+            else
+            {
+                MessageBox.Show("いまいちな書式なのでリストに追加できなかった");
+            }
+        }
+
+        private void AddTextToComboBox(object sender, ObservableCollection<string> list)
+        {
+            var button = sender as Button;
+            if (button.Tag is ComboBox cb) AddTextToComboBox(cb.Text, list, cb);
+        }
+
+        private bool CheckDateTimeStringFormat(string text)
+        {
+            try
+            {
+                DateTime.Now.ToString(text);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         private void MyButtonRemoveFileNameDateFromat_Click(object sender, RoutedEventArgs e)
@@ -1486,9 +1574,6 @@ namespace Pixcren
             if (dialog.ShowDialog() == true)
             {
                 AddTextToComboBox(dialog.FileName, MyAppConfig.SoundFilePathList, MyComboBoxSoundFilePath);
-                //MyAppConfig.SoundFilePathList.Add(dialog.FileName);
-                //MySound = new System.Media.SoundPlayer(dialog.FileName);
-                //MySound = new System.Media.SoundPlayer(new System.IO.FileStream(dialog.FileName, System.IO.FileMode.Open, System.IO.FileAccess.Read));
                 ChangeSoundOrder(dialog.FileName);
             }
 
@@ -1561,10 +1646,69 @@ namespace Pixcren
         private void MyButtonHelpDateTimeStringformat_Click(object sender, RoutedEventArgs e)
         {
             if (IsDateformatShow) return;
-            WindowDateTimeStringformat window = new WindowDateTimeStringformat();
+            WindowDateTimeStringformat window = new WindowDateTimeStringformat(MyDateTimeStringFormatBitmapSource);
             window.Owner = this;
             window.Show();
             IsDateformatShow = true;
+        }
+
+        //日時書式入力時、見本を更新、無効な書式は赤文字にする
+        private void MyComboBoxFileNameDateFormat_PreviewKeyUp(object sender, KeyEventArgs e)
+        {
+            if (sender is not ComboBox cb) return;
+            string cbText = cb.Text;
+            if (string.IsNullOrWhiteSpace(cbText))
+            {
+                cbText = DATE_TIME_STRING_FORMAT;
+            }
+            var now = DateTime.Now;
+
+            //無効なファイル名なら枠色を赤にする
+            try
+            {
+                if (CheckFileNameValidid(now.ToString(cbText)))
+                {
+                    cb.Foreground = SystemColors.ControlTextBrush;
+                }
+                else
+                {
+                    cb.Foreground = Brushes.Red;
+                }
+                //見本ファイル名の表示更新
+                UpdateFileNameSample();
+
+            }
+            catch (Exception)
+            {
+                cb.Foreground = Brushes.Red;
+            }
+
+        }
+
+        private void MyButtonSerialReset_Click(object sender, RoutedEventArgs e)
+        {
+            MyNumericUpDownFileNameSerial.MyValue = 0m;
+        }
+
+        private void MyComboBoxFileNameText_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is not ComboBox cb) return;
+            cb.Text = (string)cb.SelectedItem;
+            cb.Foreground = SystemColors.ControlTextBrush;
+            UpdateFileNameSample();
+        }
+
+        private void MyComboBoxFileNameOrder_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateFileNameSample();
+        }
+
+        private void MyComboBoxFileNameDateFormat_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is not ComboBox cb) return;
+            cb.Text = (string)cb.SelectedItem;
+            cb.Foreground = SystemColors.ControlTextBrush;
+            UpdateFileNameSample();
         }
     }
 
@@ -1607,6 +1751,7 @@ namespace Pixcren
         //[DataMember] public FileNameBaseType FileNameBaseType { get; set; }
         [DataMember] public bool IsFileNameDate { get; set; }
         [DataMember] public double FileNameDateOrder { get; set; }
+        [DataMember] public string FileNameDataFormat { get; set; }
         [DataMember] public ObservableCollection<string> FileNameDateFormatList { get; set; } = new();
 
         [DataMember] public bool IsFileNameSerial { get; set; }

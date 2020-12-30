@@ -19,7 +19,7 @@ namespace Pixcren
     /// </summary>
     public partial class WindowDateTimeStringformat : Window
     {
-        public WindowDateTimeStringformat()
+        public WindowDateTimeStringformat(BitmapSource bitmapSource)
         {
             InitializeComponent();
             this.Title = "日時の書式";
@@ -35,12 +35,15 @@ namespace Pixcren
 
             formatList = new List<string>() { "使えない", "f", "F", "g", "G", "O", "R", "s", "t", "T", "u", "U", "d", "K_" };
             MyListBoxNG.DataContext = MakeListItem(now, formatList);
-            formatList = new List<string>() { "いまいち", "F", "FF", "FFF", "FFFF", "FFFFF", "FFFFFF", "FFFFFFF", "z_", "zz", "t_" };
+            formatList = new List<string>() { "いまいち", "F_", "FF", "FFF", "FFFF", "FFFFF", "FFFFFF", "FFFFFFF", "z_", "zz", "t_" };
             MyListBoxNG2.DataContext = MakeListItem(now, formatList);
 
+            //画像の設定
+            MyImage.Source = bitmapSource;
             
         }
 
+        //閉じるときにフラグをMainWindowに通知
         private void WindowDateTimeStringformat_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             var owner = this.Owner as MainWindow;
