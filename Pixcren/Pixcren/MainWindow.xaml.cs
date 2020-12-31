@@ -1527,7 +1527,11 @@ namespace Pixcren
             }
             else
             {
-                MessageBox.Show("いまいちな書式なのでリストに追加できなかった");
+                MessageBox.Show($"いまいちな書式なのでリストに追加できなかった\n" +
+                    $"いまいちな原因は\n\n" +
+                    $"書式に半角の \\ \\ : * ? \" < > | が含まれている\n" +
+                    $"もしくは\n" +
+                    $"書式適用後にこれらの文字が含まれている");
             }
         }
 
@@ -1539,15 +1543,17 @@ namespace Pixcren
 
         private bool CheckDateTimeStringFormat(string text)
         {
+            string fileName;
             try
             {
-                DateTime.Now.ToString(text);
-                return true;
+                fileName = DateTime.Now.ToString(text);
             }
             catch (Exception)
             {
                 return false;
             }
+            if (CheckFileNameValidid(fileName)) return true;
+            else return false;
         }
 
         private void MyButtonRemoveFileNameDateFromat_Click(object sender, RoutedEventArgs e)
