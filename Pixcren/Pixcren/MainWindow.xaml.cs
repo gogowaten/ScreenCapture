@@ -27,6 +27,8 @@ using Microsoft.Win32;
 
 //スクショアプリできた！右クリックメニューを表示したエクセルもキャプチャできる - 午後わてんのブログ
 //https://gogowaten.hatenablog.com/entry/2020/12/28/165619
+//スクショアプリPixcrenの改善、ファイル名見本更新と日時書式一覧表 - 午後わてんのブログ
+//https://gogowaten.hatenablog.com/entry/2020/12/31/182020
 
 
 namespace Pixcren
