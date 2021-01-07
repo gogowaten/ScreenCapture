@@ -517,7 +517,7 @@ namespace Pixcren
 
                 if (System.IO.Directory.Exists(directory) == false)
                 {
-                    MessageBox.Show($"指定されている保存場所は存在しないので保存できない");
+                    MessageBox.Show($"指定されている保存場所は存在しないので保存できない", "注意");
                     return;
                 }
                 //キャプチャ処理
@@ -611,7 +611,10 @@ namespace Pixcren
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"クリップボードにコピーできなかった\n{ex.Message}");
+                        MessageBox.Show($"クリップボードにコピーできなかった\n" +
+                            $"理由は不明、まれに起こる\n\n" +
+                            $"エラーメッセージ\n" +
+                            $"{ex.Message}", "エラー発生");
                     }
                 }
                 //ファイルに保存
@@ -631,7 +634,7 @@ namespace Pixcren
                     }
                     else
                     {
-                        MessageBox.Show("ファイル名に使えない文字が指定されていたので保存できなかった");
+                        MessageBox.Show("ファイル名に使えない文字が指定されていたので保存できなかった", "エラー発生");
                     }
 
                 }
@@ -685,10 +688,13 @@ namespace Pixcren
             //上書きはできないので、古いのを削除してから登録
             _ = UnregisterHotKey(MyWindowHandle, hotkeyId);
 
-            int mod = GetModifierKeySum();
+            //int mod = GetModifierKeySum();
+            int mod = GetModifierKeySum2();
             if (RegisterHotKey(MyWindowHandle, hotkeyId, mod, vKey) == 0)
             {
-                MessageBox.Show("登録に失敗");
+                MessageBox.Show("このキーの組み合わせは登録できなかった\n" +
+                    "理由：他のアプリ、もしくはウィンドウズが使っている可能性が巨レ存\n" +
+                    "winキーとの組み合わせはウィンドウズが使っていることが多い", "ホットキーの登録に失敗");
                 MyGroupBoxHotKey.BorderBrush = Brushes.Red;
                 //MyGroupBoxHotKey.Header = "無効なホットキー";
             }
@@ -700,6 +706,7 @@ namespace Pixcren
             }
         }
 
+        //ホットキーの修飾キーフラグの値取得
         private int GetModifierKeySum()
         {
             int mod = 0;
@@ -707,6 +714,18 @@ namespace Pixcren
             if (MyAppConfig.HotkeyCtrl) mod += (int)ModifierKeys.Control;
             if (MyAppConfig.HotkeyShift) mod += (int)ModifierKeys.Shift;
             if (MyAppConfig.HotkeyWin) mod += (int)ModifierKeys.Windows;
+            return mod;
+        }
+        //フラグなので↑の足し算より、↓のorがいい
+        //ことりちゅん@えくせるちゅんちゅんさんはTwitterを使っています
+        //https://twitter.com/KotorinChunChun/status/1347138399455465475
+        private int GetModifierKeySum2()
+        {
+            int mod = 0;
+            if (MyAppConfig.HotkeyAlt) mod |= (int)ModifierKeys.Alt;
+            if (MyAppConfig.HotkeyCtrl) mod |= (int)ModifierKeys.Control;
+            if (MyAppConfig.HotkeyShift) mod |= (int)ModifierKeys.Shift;
+            if (MyAppConfig.HotkeyWin) mod |= (int)ModifierKeys.Windows;
             return mod;
         }
 
@@ -1176,7 +1195,7 @@ namespace Pixcren
 
             if (string.IsNullOrWhiteSpace(dir) || System.IO.Directory.Exists(dir) == false)
             {
-                MessageBox.Show($"指定された保存場所\n{dir}\nは存在しない");
+                MessageBox.Show($"指定された保存場所\n{dir}\nは存在しない", "保存できなかった");
             }
             else
             {
@@ -1224,7 +1243,7 @@ namespace Pixcren
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"保存できなかった\n{ex}");
+                MessageBox.Show($"保存できなかった\n{ex}", "保存できなかった");
             }
         }
 
@@ -1468,7 +1487,7 @@ namespace Pixcren
                 }
                 else
                 {
-                    MessageBox.Show("ファイル名に使えない文字列があったので追加できなかった");
+                    MessageBox.Show("ファイル名に使えない文字列があったので追加できなかった", "リストに追加できなかった");
                 }
             }
 
@@ -1533,7 +1552,7 @@ namespace Pixcren
                     $"いまいちな原因は\n\n" +
                     $"書式に半角の \\ \\ : * ? \" < > | が含まれている\n" +
                     $"もしくは\n" +
-                    $"書式適用後にこれらの文字が含まれている");
+                    $"書式適用後にこれらの文字が含まれている", "リストに追加できなかった");
             }
         }
 
@@ -1605,7 +1624,9 @@ namespace Pixcren
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"{ex.Message}");
+                        MessageBox.Show($"再生できなかった\n" +
+                            $"頭に無音が続くファイルは再生できないことが多い気がする\n" +
+                            $"{ex.Message}", "再生できなかった");
                     }
 
                     break;

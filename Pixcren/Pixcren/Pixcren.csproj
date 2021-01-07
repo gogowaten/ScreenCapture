@@ -7,11 +7,11 @@
     <Platforms>AnyCPU;x64</Platforms>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <Authors>gogowaten</Authors>
-    <Description>スクリーンショット撮影、画面キャプチャ</Description>
+    <Description>スクリーンショット、画面キャプチャ</Description>
     <Copyright>午後わてん</Copyright>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
-    <Version>1.1.0</Version>
+    <AssemblyVersion>1.1.1.0</AssemblyVersion>
+    <FileVersion>1.1.1.0</FileVersion>
+    <Version>1.1.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
