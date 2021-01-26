@@ -135,33 +135,33 @@ namespace Pixcren
         [DllImport("user32.dll")]
         private static extern IntPtr GetParent(IntPtr hWnd);
 
-        //[DllImport("user32.dll")]
-        //private static extern IntPtr GetWindow(IntPtr hWnd, GETWINDOW_CMD uCmd);//本当のuCmdはuint型
-        //enum GETWINDOW_CMD
-        //{
-        //    GW_CHILD = 5,
-        //    //指定されたウィンドウが親ウィンドウである場合、取得されたハンドルは、Zオーダーの最上位にある子ウィンドウを識別します。それ以外の場合、取得されたハンドルはNULLです。この関数は、指定されたウィンドウの子ウィンドウのみを調べます。子孫ウィンドウは調べません。
-        //    GW_ENABLEDPOPUP = 6,
-        //    //取得されたハンドルは、指定されたウィンドウが所有する有効なポップアップウィンドウを識別します（検索では、GW_HWNDNEXTを使用して最初に見つかったそのようなウィンドウが使用されます）。それ以外の場合、有効なポップアップウィンドウがない場合、取得されるハンドルは指定されたウィンドウのハンドルです。
-        //    GW_HWNDFIRST = 0,
-        //    //取得されたハンドルは、Zオーダーで最も高い同じタイプのウィンドウを識別します。
-        //    //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetWindow(IntPtr hWnd, GETWINDOW_CMD uCmd);//本当のuCmdはuint型
+        enum GETWINDOW_CMD
+        {
+            GW_CHILD = 5,
+            //指定されたウィンドウが親ウィンドウである場合、取得されたハンドルは、Zオーダーの最上位にある子ウィンドウを識別します。それ以外の場合、取得されたハンドルはNULLです。この関数は、指定されたウィンドウの子ウィンドウのみを調べます。子孫ウィンドウは調べません。
+            GW_ENABLEDPOPUP = 6,
+            //取得されたハンドルは、指定されたウィンドウが所有する有効なポップアップウィンドウを識別します（検索では、GW_HWNDNEXTを使用して最初に見つかったそのようなウィンドウが使用されます）。それ以外の場合、有効なポップアップウィンドウがない場合、取得されるハンドルは指定されたウィンドウのハンドルです。
+            GW_HWNDFIRST = 0,
+            //取得されたハンドルは、Zオーダーで最も高い同じタイプのウィンドウを識別します。
+            //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
 
-        //    GW_HWNDLAST = 1,
-        //    //取得されたハンドルは、Zオーダーで最も低い同じタイプのウィンドウを識別します。
-        //    //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
+            GW_HWNDLAST = 1,
+            //取得されたハンドルは、Zオーダーで最も低い同じタイプのウィンドウを識別します。
+            //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
 
-        //    GW_HWNDNEXT = 2,
-        //    //取得されたハンドルは、指定されたウィンドウの下のウィンドウをZオーダーで識別します。
-        //    //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
+            GW_HWNDNEXT = 2,
+            //取得されたハンドルは、指定されたウィンドウの下のウィンドウをZオーダーで識別します。
+            //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
 
-        //    GW_HWNDPREV = 3,
-        //    //取得されたハンドルは、指定されたウィンドウの上のウィンドウをZオーダーで識別します。
-        //    //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
+            GW_HWNDPREV = 3,
+            //取得されたハンドルは、指定されたウィンドウの上のウィンドウをZオーダーで識別します。
+            //指定されたウィンドウが最上位のウィンドウである場合、ハンドルは最上位のウィンドウを識別します。指定されたウィンドウがトップレベルウィンドウである場合、ハンドルはトップレベルウィンドウを識別します。指定されたウィンドウが子ウィンドウの場合、ハンドルは兄弟ウィンドウを識別します。
 
-        //    GW_OWNER = 4,
-        //    //取得されたハンドルは、指定されたウィンドウの所有者ウィンドウを識別します（存在する場合）。詳細については、「所有するWindows」を参照してください。
-        //}
+            GW_OWNER = 4,
+            //取得されたハンドルは、指定されたウィンドウの所有者ウィンドウを識別します（存在する場合）。詳細については、「所有するWindows」を参照してください。
+        }
 
         //[DllImport("user32.dll")]
         //private static extern IntPtr GetAncestor(IntPtr hWnd, GETANCESTOR_FLAGS gaFlags);//本当のgaFlagsはuint型の1 2 3
@@ -482,6 +482,7 @@ namespace Pixcren
                 { CaptureRectType.WindowClient, "ウィンドウのクライアント領域" },
                 { CaptureRectType.UnderCursor, "カーソル下のコントロール" },
                 { CaptureRectType.UnderCursorClient, "カーソル下のクライアント領域" },
+                { CaptureRectType.WindowWithMenu, "ウィンドウ特殊(メニューウィンドウ)" },
             };
 
 
@@ -536,11 +537,13 @@ namespace Pixcren
                 var screen = ScreenCapture();
 
                 //RECT取得
-                Int32Rect rect;
+                //Int32Rect rect;
+                List<Int32Rect> myRectList = new();
                 switch (MyAppConfig.RectType)
                 {
                     case CaptureRectType.Screen:
-                        rect = new Int32Rect(0, 0, screen.PixelWidth, screen.PixelHeight);
+                        //rect = new Int32Rect(0, 0, screen.PixelWidth, screen.PixelHeight);
+                        myRectList.Add(new Int32Rect(0, 0, screen.PixelWidth, screen.PixelHeight));
                         break;
 
                     case CaptureRectType.Window:
@@ -555,7 +558,7 @@ namespace Pixcren
                                               out myRECT,
                                               Marshal.SizeOf(typeof(RECT)));
                         //RECTからクロップ用のInt32Rectを作成、登録
-                        rect = MakeCroppRectFromRECT(myRECT, screen.PixelWidth, screen.PixelHeight);
+                        myRectList.Add(MakeCroppRectFromRECT(myRECT, screen.PixelWidth, screen.PixelHeight));
                         break;
 
                     case CaptureRectType.WindowClient:
@@ -564,7 +567,7 @@ namespace Pixcren
                         hWnd = GetParentWindowFromForegroundWindow();
                         ClientToScreen(hWnd, out myPOINT);
                         GetClientRect(hWnd, out myRECT);
-                        rect = MakeCroppRectFromClientRECT(myRECT, myPOINT, screen.PixelWidth, screen.PixelHeight);
+                        myRectList.Add(MakeCroppRectFromClientRECT(myRECT, myPOINT, screen.PixelWidth, screen.PixelHeight));
                         break;
 
                     case CaptureRectType.UnderCursor:
@@ -581,7 +584,7 @@ namespace Pixcren
                             //GetWindowRect(hWnd, out myRECT);
                             DwmGetWindowAttribute(hWnd, DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out myRECT, Marshal.SizeOf(typeof(RECT)));
                         }
-                        rect = MakeCroppRectFromRECT(myRECT, screen.PixelWidth, screen.PixelHeight);
+                        myRectList.Add(MakeCroppRectFromRECT(myRECT, screen.PixelWidth, screen.PixelHeight));
                         break;
 
                     case CaptureRectType.UnderCursorClient:
@@ -590,17 +593,39 @@ namespace Pixcren
                         hWnd = WindowFromPoint(MyCursorPoint);
                         ClientToScreen(hWnd, out myPOINT2);
                         GetClientRect(hWnd, out myRECT);
-                        rect = MakeCroppRectFromClientRECT(myRECT, myPOINT2, screen.PixelWidth, screen.PixelHeight);
+                        myRectList.Add(MakeCroppRectFromClientRECT(myRECT, myPOINT2, screen.PixelWidth, screen.PixelHeight));
 
                         break;
 
+                    case CaptureRectType.WindowWithMenu:
+                        //メニューウィンドウがアプリのウィンドウ外にある場合はメニューウィンドウのぶん領域を拡張して描画する
+                        //カーソル下のウィンドウを基準にRootOwnerWindowまでのRectを収集
+                        IntPtr w = WindowFromPoint(MyCursorPoint);
+                        var (ptrs, res, strs) = GetWindowsToWithTextNexts2(w, 20);
+                        Int32Rect preR;
+                        for (int i = 0; i < ptrs.Count; i++)
+                        {
+                            Int32Rect imaR = RectToIntRectWith切り捨て(GetWindowRectMitame(ptrs[i]));
+                            if (((preR.X == imaR.X) && (preR.Y == imaR.Y)) == false)
+                            {
+                                myRectList.Add(imaR);
+                                preR = imaR;
+                            }
+                        }
+                        //最前面のを付け足す
+                        myRectList.Add(
+                            RectToIntRectWith切り捨て(
+                                GetWindowRectMitame(
+                                    GetParentWindowFromForegroundWindow())));
+                        break;
+
                     default:
-                        rect = new Int32Rect(0, 0, screen.PixelWidth, screen.PixelHeight);
+                        myRectList.Add(new Int32Rect(0, 0, screen.PixelWidth, screen.PixelHeight));
                         break;
                 }
 
                 //保存
-                BitmapSource bitmap = MakeBitmapForSave(screen, rect);
+                BitmapSource bitmap = MakeBitmapForSave(screen, myRectList);
                 //クリップボードにコピーするだけ
                 if (MyCheckBoxIsOutputToClipboardOnly.IsChecked == true)
                 {
@@ -641,6 +666,69 @@ namespace Pixcren
 
             }
         }
+
+        /// <summary>
+        /// APIのGetWindowでNextWindowを収集、上限数を超えるかTextを所有するWindowが見つかるまで全部遡る
+        /// </summary>
+        /// <param name="hWnd">基準になるウィンドウのハンドル</param>
+        /// <param name="loopCount">上限数</param>
+        /// <returns></returns>
+        private (List<IntPtr> ptrs, List<RECT> res, List<string> strs) GetWindowsToWithTextNexts2(IntPtr hWnd, int loopCount)
+        {
+            List<IntPtr> ptrs = new();
+            List<RECT> res = new();
+            List<string> strs = new();
+            int count = 0;
+
+            IntPtr temp = hWnd;
+            string text;
+
+            //text付きNextが見つかるまで辿る
+            do
+            {
+                if (temp == IntPtr.Zero) break;
+                text = MyGetWindowText(temp);
+                if (text != "") break;
+                ptrs.Add(temp);
+                res.Add(MyGetWindowRect(temp));
+                strs.Add(text);
+
+                temp = GetWindow(temp, GETWINDOW_CMD.GW_HWNDNEXT);
+                count++;
+            } while (count < loopCount);
+
+            return (ptrs, res, strs);
+        }
+        private string MyGetWindowText(IntPtr hWnd)
+        {
+            var text = new StringBuilder(65535);
+            _ = GetWindowText(hWnd, text, 65535);
+            return text.ToString();
+        }
+        private RECT MyGetWindowRect(IntPtr hWnd)
+        {
+            _ = GetWindowRect(hWnd, out RECT re);
+            return re;
+        }
+
+        //見た目通りのRect取得
+        private Rect GetWindowRectMitame(IntPtr hWnd)
+        {
+            //見た目通りのWindowRectを取得
+            RECT myRECT;
+            DwmGetWindowAttribute(
+                hWnd,
+                DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS,
+                out myRECT, System.Runtime.InteropServices.Marshal.SizeOf(typeof(RECT)));
+
+            return MyConvertApiRectToRect(myRECT);
+        }
+        private Rect MyConvertApiRectToRect(RECT rect)
+        {
+            return new Rect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+        }
+
+
 
         private void PlayMySound()
         {
@@ -1205,25 +1293,91 @@ namespace Pixcren
 
 
         #region 画像保存
+        /// <summary>
+        /// 複数Rect範囲を組み合わせた形にbitmapを切り抜く
+        /// </summary>
+        /// <param name="source">元の画像</param>
+        /// <param name="rectList">Rectのコレクション</param>
+        /// <returns></returns>
+        private BitmapSource CroppedBitmapFromRects(BitmapSource source, List<Rect> rectList)
+        {
+            List<Int32Rect> re = new();
+            foreach (var item in rectList)
+            {
+                re.Add(new Int32Rect((int)item.X, (int)item.Y, (int)item.Width, (int)item.Height));
+            }
 
-        private BitmapSource MakeBitmapForSave(BitmapSource source, Int32Rect rect)
+            return CroppedBitmapFromRects(source, re);
+        }
+        private BitmapSource CroppedBitmapFromRects(BitmapSource source, List<Int32Rect> rectList)
+        {
+            var dv = new DrawingVisual();
+
+            using (DrawingContext dc = dv.RenderOpen())
+            {
+                //それぞれのRect範囲で切り抜いた画像を描画していく
+                foreach (var rect in rectList)
+                {
+                    dc.DrawImage(new CroppedBitmap(source, rect), new Rect(rect.X, rect.Y, rect.Width, rect.Height));
+                }
+            }
+
+            //描画位置調整
+            dv.Offset = new Vector(-dv.ContentBounds.X, -dv.ContentBounds.Y);
+
+            //bitmap作成、縦横サイズは切り抜き後の画像全体がピッタリ収まるサイズにする
+            //PixelFormatsはPbgra32で決め打ち、これ以外だとエラーになるかも、
+            //画像を読み込んだbitmapImageのPixelFormats.Bgr32では、なぜかエラーになった
+            var bmp = new RenderTargetBitmap(
+                (int)Math.Ceiling(dv.ContentBounds.Width),
+                (int)Math.Ceiling(dv.ContentBounds.Height),
+                96, 96, PixelFormats.Pbgra32);
+
+            bmp.Render(dv);
+            return bmp;
+        }
+
+        //RectからInt32Rect作成、小数点以下切り捨て編
+        //Rectの数値は整数のはずだから、これでいいはず
+        private Int32Rect RectToIntRectWith切り捨て(Rect re)
+        {
+            return new Int32Rect((int)re.X, (int)re.Y, (int)re.Width, (int)re.Height);
+        }
+
+        //画像にマウスカーソルを描画してからCropp
+        private BitmapSource MakeBitmapForSave(BitmapSource source, List<Rect> reList)
         {
             BitmapSource bitmap;
             if (MyAppConfig.IsDrawCursor == true)
             {
-                if (IsMaskUse)
-                {
-                    bitmap = DrawCursorOnBitmapWithMask(source);
-                }
-                else
-                {
-                    bitmap = DrawCursorOnBitmap(source);
-                }
+                bitmap = DrawCursor(source);
             }
             else { bitmap = source; }
 
-            return new CroppedBitmap(bitmap, rect);
+            return CroppedBitmapFromRects(bitmap, reList);            
+        }
+        private BitmapSource MakeBitmapForSave(BitmapSource source, List<Int32Rect> reList)
+        {
+            List<Rect> re = new();
+            foreach (var item in reList)
+            {
+                re.Add(new Rect(item.X, item.Y, item.Width, item.Height));
+            }
+            return MakeBitmapForSave(source, re);
+        }
 
+        private BitmapSource DrawCursor(BitmapSource source)
+        {
+            BitmapSource bitmap;
+            if (IsMaskUse)
+            {
+                bitmap = DrawCursorOnBitmapWithMask(source);
+            }
+            else
+            {
+                bitmap = DrawCursorOnBitmap(source);
+            }
+            return bitmap;
         }
 
         private void SaveBitmap(BitmapSource bitmap, string fullPath)
@@ -1891,6 +2045,7 @@ namespace Pixcren
         WindowClient,
         UnderCursor,
         UnderCursorClient,
+        WindowWithMenu,
 
     }
 
