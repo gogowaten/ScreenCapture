@@ -717,8 +717,6 @@ namespace Pixcren
             return mod;
         }
         //フラグなので↑の足し算より、↓のorがいい
-        //ことりちゅん@えくせるちゅんちゅんさんはTwitterを使っています
-        //https://twitter.com/KotorinChunChun/status/1347138399455465475
         private int GetModifierKeySum2()
         {
             int mod = 0;
