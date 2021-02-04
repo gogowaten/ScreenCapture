@@ -329,6 +329,8 @@ namespace Pixcren
         //日時の書式一覧画像
         private BitmapSource MyDateTimeStringFormatBitmapSource;
 
+        //メニューウィンドウ付きでキャプチャ時に使用
+        private const int LOOP_LIMIT = 10;
 
         public MainWindow()
         {
@@ -598,31 +600,19 @@ namespace Pixcren
                         break;
 
                     case CaptureRectType.WindowWithMenu:
-                        //メニューウィンドウがアプリのウィンドウ外にある場合はメニューウィンドウのぶん領域を拡張して描画する
-                        //カーソル下のウィンドウを基準にRootOwnerWindowまでのRectを収集
-                        IntPtr w = WindowFromPoint(MyCursorPoint);
-                        var (ptrs, res, strs) = GetWindowsToWithTextNexts2(w, 20);
-                        Int32Rect preR;
-                        for (int i = 0; i < ptrs.Count; i++)
-                        {
-                            Int32Rect imaR = RectToIntRectWith切り捨て(GetWindowRectMitame(ptrs[i]));
-                            if (((preR.X == imaR.X) && (preR.Y == imaR.Y)) == false)
-                            {
-                                myRectList.Add(imaR);
-                                preR = imaR;
-                            }
-                        }
-                        //最前面のを付け足す
-                        myRectList.Add(
-                            RectToIntRectWith切り捨て(
-                                GetWindowRectMitame(
-                                    GetParentWindowFromForegroundWindow())));
+                        //アプリのウィンドウキャプチャで、枠外のメニューウィンドウもキャプチャ
+                        //https://gogowaten.hatenablog.com/entry/2021/02/04/150711
+                        myRectList = MakeForeWindowWithMenuWindowRectList().Select(x => new Int32Rect((int)x.X, (int)x.Y, (int)x.Width, (int)x.Height)).ToList();
                         break;
 
                     default:
                         myRectList.Add(new Int32Rect(0, 0, screen.PixelWidth, screen.PixelHeight));
                         break;
                 }
+
+                //Rectの修正
+                myRectList = FixInt32Rects(myRectList, screen.PixelWidth, screen.PixelHeight);
+
 
                 //保存
                 BitmapSource bitmap = MakeBitmapForSave(screen, myRectList);
@@ -667,48 +657,338 @@ namespace Pixcren
             }
         }
 
+        //Rectの修正、デスクトップ領域外になっているのを調整
+        private List<Int32Rect> FixInt32Rects(List<Int32Rect> rList, int w, int h)
+        {            
+            List<Int32Rect> rl = new();
+            foreach (var item in rList)
+            {
+                rl.Add(FixInt32Rect(item, w, h));
+            }
+            return rl;
+        }
+
+        private Int32Rect FixInt32Rect(Int32Rect r, int w, int h)
+        {
+            if (r.X < 0)
+            {
+                r.Width += r.X;
+                r.X = 0;
+            }
+            if (r.Y < 0)
+            {
+                r.Height += r.Y;
+                r.Y = 0;
+            }
+
+            int temp = r.X + r.Width;
+            if (temp > w) r.Width += w - temp;
+            temp = r.Y + r.Height;
+            if (temp > h) r.Height += h - temp;
+            return r;
+        }
+
+        #region メニューウィンドウのRect収集
+
         /// <summary>
-        /// APIのGetWindowでNextWindowを収集、上限数を超えるかTextを所有するWindowが見つかるまで全部遡る
+        /// 最前面ウィンドウと、そのメニューや右クリックメニューウィンドウ群のRectリストを作成
         /// </summary>
-        /// <param name="hWnd">基準になるウィンドウのハンドル</param>
-        /// <param name="loopCount">上限数</param>
         /// <returns></returns>
-        private (List<IntPtr> ptrs, List<RECT> res, List<string> strs) GetWindowsToWithTextNexts2(IntPtr hWnd, int loopCount)
+        private List<Rect> MakeForeWindowWithMenuWindowRectList()
+        {
+            List<Rect> result = new();
+            //最前面アプリのウィンドウハンドル取得
+            IntPtr fore = GetParentWindowFromForegroundWindow();// GetForegroundWindow();
+            //var infoFore = GetWindowRectAndText(fore);//確認用
+            //ForegroundのPopupハンドルとRect取得
+            IntPtr popup = GetWindow(fore, GETWINDOW_CMD.GW_ENABLEDPOPUP);
+            Rect popupRect = MyGetWindowRect(popup);
+            var infoPop = GetWindowRectAndText(popup);//確認用
+
+            //Popupが存在する(Rectが0じゃない)場合
+            if (popupRect != new Rect(0, 0, 0, 0))
+            {
+                //メニューウィンドウがなくても、なぜかENABLEDPOPUPが取得できるアプリがある
+                //そのRectはアプリのウィンドウRectと同じ数値なので、それで判別できる
+                //座標が違う場合だけNEXTで収集
+                var foreRect = MyGetWindowRect(fore);
+                if (popupRect.X == foreRect.X || popupRect.Y == foreRect.Y)
+                {
+                    //GetForegroundwindowの見た目通りのRectを追加
+                    result.Add(GetWindowRectMitame(fore));
+                }
+                else
+                {
+                    //PopupのNEXT(下にあるウィンドウハンドル)を収集
+                    List<IntPtr> pops = GetCmdWindows(popup, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT);
+                    var infoPops = GetWindowRectAndTexts(pops);//確認用               
+
+                    //必要なRectだけを選別
+                    result = SelectRects(pops, fore);
+                    ////Textを持つウィンドウ以降を除去
+                    ////残ったウィンドウのRect取得
+                    ////ドロップシャドウウィンドウのRectを除去
+                    ////前後のRectが重なっているところまで選択して、以降は除外
+
+                    //GetForegroundwindowの見た目通りのRectを追加
+                    result.Add(GetWindowRectMitame(fore));
+                }
+
+            }
+            //Popupが存在しない(Rectが0)場合
+            else
+            {
+                //GetForegroundwindowの見た目通りのRectを追加
+                Rect foreRect = GetWindowRectMitame(fore);
+                result.Add(foreRect);
+
+                //マウスカーソル下のウィンドウハンドル取得、これを基準にする
+                GetCursorPos(out POINT cursorP);
+                IntPtr cursor = WindowFromPoint(cursorP);
+                //Rect cursorRect = GetWindowRectMitame(cursor);
+
+                //カーソル下のウィンドウRectとForegroundのRect重なり判定
+                //関係あるウィンドウなら、Textがない and Rectが重なっている
+                //重なりはメニューウィンドウ全域と重なっていればおk判定にする
+                List<Rect> rs = new();
+                if (MyGetWindowText(cursor) == "")
+                {
+                    //基準の上下それぞれのウィンドウハンドル取得
+                    List<IntPtr> prev = GetCmdWindows(cursor, GETWINDOW_CMD.GW_HWNDPREV, LOOP_LIMIT);//上
+                    List<IntPtr> next = GetCmdWindows(cursor, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT);//下
+                    //必要なRectだけを選別
+                    List<Rect> rsPrev = SelectRects(prev, fore);
+                    List<Rect> rsNext = SelectRects(next, fore);
+                    //前後のRectリストを統合
+                    rs = rsPrev.Union(rsNext).ToList();
+                }
+
+                //重なり判定はForegroundのRectと、それ以外のRectを結合したRectで判定する
+                //Rectの結合はGeometryGroupを使う
+                GeometryGroup gg = new();
+                for (int i = 0; i < rs.Count; i++)
+                {
+                    gg.Children.Add(new RectangleGeometry(rs[i]));
+                }
+                //重なり判定、重なっていたらForegroundのRect＋それ以外のRect
+                if (IsOverlapping(gg, new RectangleGeometry(foreRect)))
+                {
+                    result = result.Union(rs).ToList();
+                }
+                //重なっていない場合はメニューウィンドウは開かれていないと判定して
+                //ForegroundのウィンドウRectだけでいい
+            }
+            return result;
+        }
+        //指定したAPI.GETWINDOW_CMDを収集、自分自身も含む
+        private List<IntPtr> GetCmdWindows
+            (IntPtr hWnd, GETWINDOW_CMD cmd, int loopCount)
+        {
+            List<IntPtr> v = new();
+            v.Add(hWnd);//自分自身
+
+            IntPtr temp = GetWindow(hWnd, cmd);
+            for (int i = 0; i < loopCount; i++)
+            {
+                v.Add(temp);
+                temp = GetWindow(temp, cmd);
+            }
+            return v;
+        }
+
+        private List<Rect> SelectRects(List<IntPtr> pList, IntPtr app)
+        {
+            //Textを持つウィンドウ以降を除去
+            List<IntPtr> noneText = DeleteWithTextWindow(pList, app);
+            //残ったウィンドウの見た目通りのRect取得
+            List<Rect> rs = noneText.Select(x => GetWindowRectMitame(x)).ToList();
+            //ドロップシャドウウィンドウのRectを除去
+            var result = DeleteShadowRect(rs);
+            //サイズが0のRectを除去
+            result = result.Where(x => x.Size.Width != 0 && x.Size.Height != 0).ToList();
+            //前後のRectが重なっているところまで選択して、以降は除外
+            return SelectOverlappedRect(result);
+        }
+
+        /// <summary>
+        /// Textがないものを収集、例外はOWNERが最前面アプリの場合はTextありでも収集、それ以外でTextをもつウィンドウが出た時点で終了、リストを返す
+        /// </summary>
+        /// <param name="wList"></param>
+        /// <param name="app">最前面アプリのウィンドウハンドル</param>
+        /// <returns></returns>
+        private List<IntPtr> DeleteWithTextWindow(List<IntPtr> wList, IntPtr app)
+        {
+            List<IntPtr> result = new();
+            for (int i = 0; i < wList.Count; i++)
+            {
+                if (MyGetWindowText(wList[i]) == "" || (app == GetWindow(wList[i], GETWINDOW_CMD.GW_OWNER)))
+                {
+                    result.Add(wList[i]);
+                }
+                else
+                {
+                    return result;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// ドロップシャドウ用のウィンドウを判定して、取り除いて返す。前後のRectのtopleftが同じなら後のRectはドロップシャドウと判定する
+        /// </summary>
+        /// <param name="rList"></param>
+        /// <returns></returns>       
+        private List<Rect> DeleteShadowRect(List<Rect> rList)
+        {
+            List<Rect> result = new();
+            result.Add(rList[0]);
+            Rect preRect = rList[0];//前Rect
+            for (int i = 0; i < rList.Count; i++)
+            {
+                //リストに加えて
+                Rect imaRect = rList[i];//後Rect
+                result.Add(imaRect);
+
+                //前後の座標が同じ場合は
+                if (imaRect.TopLeft == preRect.TopLeft)
+                {
+                    //サイズが大きい方を削除
+                    if (imaRect.Size.Width < preRect.Size.Width)
+                    {
+                        result.Remove(rList[i - 1]);
+                    }
+                    else
+                    {
+                        result.Remove(rList[i]);
+                    }
+                }
+                preRect = imaRect;//前Rectに後Rectを入れて次へ
+            }
+            return result;
+        }
+
+        //WPFのRectの重なり判定、RectangleGeometryにしてからFillContainsWithDetailメソッドでできた
+        //https://gogowaten.hatenablog.com/entry/2021/01/28/124714
+        /// <summary>
+        /// 前後のRectの重なりを判定、重なっていればリストに追加して返す。重なっていないRectが出た時点で終了
+        /// </summary>
+        /// <param name="rList"></param>
+        /// <returns></returns>
+        private List<Rect> SelectOverlappedRect(List<Rect> rList)
+        {
+            List<Rect> result = new();
+            if (rList.Count == 0) return result;
+
+            result.Add(rList[0]);
+
+            //順番に判定
+            for (int i = 1; i < rList.Count; i++)
+            {
+                if (IsOverlapping(rList[i - 1], rList[i]))
+                {
+                    //重なっていればリストに追加
+                    result.Add(rList[i]);
+                }
+                else
+                {
+                    //途切れたら終了
+                    return result;
+                }
+            }
+            return result;
+        }
+        /// <summary>
+        /// 2つのGeometryが一部でも重なっていたらTrueを返す
+        /// </summary>
+        /// <param name="g1"></param>
+        /// <param name="g2"></param>
+        /// <returns></returns>
+        private bool IsOverlapping(Geometry g1, Geometry g2)
+        {
+
+            IntersectionDetail detail = g1.FillContainsWithDetail(g2);
+            return detail != IntersectionDetail.Empty;
+            //return (detail != IntersectionDetail.Empty || detail != IntersectionDetail.NotCalculated, detail);
+        }
+        /// <summary>
+        /// 2つのRectが一部でも重なっていたらtrueを返す
+        /// </summary>
+        /// <param name="r1"></param>
+        /// <param name="r2"></param>
+        /// <returns></returns>        
+        private bool IsOverlapping(Rect r1, Rect r2)
+        {
+            return IsOverlapping(new RectangleGeometry(r1), new RectangleGeometry(r2));
+        }
+        //IntersectionDetail列挙型
+        //Empty             全く重なっていない
+        //FullyContains     r2はr1の領域に完全に収まっている
+        //FullyInside       r1はr2の領域に完全に収まっている
+        //Intersects        一部が重なっている
+        //NotCalculated     計算されません(よくわからん)
+
+
+
+
+        #endregion メニューウィンドウのRect収集
+
+
+        //ウィンドウハンドルからText(タイトル名)やRECTを取得
+        private (IntPtr, Rect re, string text) GetWindowRectAndText(IntPtr hWnd)
+        {
+            return (hWnd, MyGetWindowRect(hWnd), MyGetWindowText(hWnd));
+        }
+        private (List<IntPtr> ptrs, List<Rect> rs, List<string> strs)
+            GetWindowRectAndTexts(List<IntPtr> pList)
         {
             List<IntPtr> ptrs = new();
-            List<RECT> res = new();
+            List<Rect> rs = new();
             List<string> strs = new();
-            int count = 0;
-
-            IntPtr temp = hWnd;
-            string text;
-
-            //text付きNextが見つかるまで辿る
-            do
+            foreach (var item in pList)
             {
-                if (temp == IntPtr.Zero) break;
-                text = MyGetWindowText(temp);
-                if (text != "") break;
-                ptrs.Add(temp);
-                res.Add(MyGetWindowRect(temp));
-                strs.Add(text);
-
-                temp = GetWindow(temp, GETWINDOW_CMD.GW_HWNDNEXT);
-                count++;
-            } while (count < loopCount);
-
-            return (ptrs, res, strs);
+                ptrs.Add(item);
+                rs.Add(MyGetWindowRect(item));
+                strs.Add(MyGetWindowText(item));
+            }
+            return (ptrs, rs, strs);
         }
+        //ウィンドウハンドルからText(タイトル名)やRECTを取得
+        private (IntPtr, RECT re, string text) GetWindowAPI_RECTAndText(IntPtr hWnd)
+        {
+            return (hWnd, MyGetWindowAPI_RECT(hWnd), MyGetWindowText(hWnd));
+        }
+        private (List<IntPtr> ptrs, List<RECT> rs, List<string> strs)
+            GetWindowAPI_RECTAndTexts(List<IntPtr> pList)
+        {
+            List<IntPtr> ptrs = new();
+            List<RECT> rs = new();
+            List<string> strs = new();
+            foreach (var item in pList)
+            {
+                ptrs.Add(item);
+                rs.Add(MyGetWindowAPI_RECT(item));
+                strs.Add(MyGetWindowText(item));
+            }
+            return (ptrs, rs, strs);
+        }
+
         private string MyGetWindowText(IntPtr hWnd)
         {
             var text = new StringBuilder(65535);
             _ = GetWindowText(hWnd, text, 65535);
             return text.ToString();
         }
-        private RECT MyGetWindowRect(IntPtr hWnd)
+        private RECT MyGetWindowAPI_RECT(IntPtr hWnd)
         {
             _ = GetWindowRect(hWnd, out RECT re);
             return re;
+        }
+
+        private Rect MyGetWindowRect(IntPtr hWnd)
+        {
+            RECT r = MyGetWindowAPI_RECT(hWnd);
+            return new(r.left, r.top, r.right - r.left, r.bottom - r.top);
         }
 
         //見た目通りのRect取得
@@ -1354,7 +1634,7 @@ namespace Pixcren
             }
             else { bitmap = source; }
 
-            return CroppedBitmapFromRects(bitmap, reList);            
+            return CroppedBitmapFromRects(bitmap, reList);
         }
         private BitmapSource MakeBitmapForSave(BitmapSource source, List<Int32Rect> reList)
         {
