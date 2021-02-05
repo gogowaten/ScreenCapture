@@ -536,7 +536,7 @@ namespace Pixcren
                 }
 
                 //画面全体画像取得
-                var screen = ScreenCapture();
+                BitmapSource screen = ScreenCapture();
 
                 //RECT取得
                 //Int32Rect rect;
