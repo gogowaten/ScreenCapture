@@ -613,6 +613,8 @@ namespace Pixcren
                 //Rectの修正
                 myRectList = FixInt32Rects(myRectList, screen.PixelWidth, screen.PixelHeight);
 
+                //Rectが一つも取得できなかった場合や、サイズが0なら何もしないで終了、エラーメッセージを出したほうがいい？
+                if (myRectList.Count == 0 || myRectList[0].Width == 0) return;
 
                 //保存
                 BitmapSource bitmap = MakeBitmapForSave(screen, myRectList);
@@ -659,7 +661,7 @@ namespace Pixcren
 
         //Rectの修正、デスクトップ領域外になっているのを調整
         private List<Int32Rect> FixInt32Rects(List<Int32Rect> rList, int w, int h)
-        {            
+        {
             List<Int32Rect> rl = new();
             foreach (var item in rList)
             {
