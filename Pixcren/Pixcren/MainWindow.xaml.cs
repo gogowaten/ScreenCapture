@@ -608,7 +608,7 @@ namespace Pixcren
                         //https://gogowaten.hatenablog.com/entry/2021/02/04/150711
                         //myRectList = MakeForeWindowWithMenuWindowRectList().Select(x => new Int32Rect((int)x.X, (int)x.Y, (int)x.Width, (int)x.Height)).ToList();
                         myRectList = GetRectListForeWindowWhitMenu().Select(x => new Int32Rect((int)x.X, (int)x.Y, (int)x.Width, (int)x.Height)).ToList();
-                        
+
                         break;
 
                     default:
@@ -624,12 +624,25 @@ namespace Pixcren
 
                 //保存
                 BitmapSource bitmap = MakeBitmapForSave(screen, myRectList);
-                //クリップボードにコピーするだけ
+
+                //クリップボードにコピー、BMPとPNG形式の両方
+                //BMPはアルファ値が255になってしまう、PNGはアルファ値保持するけど、貼り付けはアプリの対応が必要
                 if (MyCheckBoxIsOutputToClipboardOnly.IsChecked == true)
                 {
                     try
                     {
-                        Clipboard.SetImage(bitmap);
+                        //BMP
+                        DataObject data = new();
+                        data.SetData(typeof(BitmapSource), bitmap);
+                        //PNG
+                        PngBitmapEncoder enc = new();
+                        enc.Frames.Add(BitmapFrame.Create(bitmap));
+                        using var ms = new System.IO.MemoryStream();
+                        enc.Save(ms);
+                        data.SetData("PNG", ms);
+
+                        Clipboard.SetDataObject(data, true);//true必須
+                        //Clipboard.SetImage(bitmap);
                         PlayMySound();
                     }
                     catch (Exception ex)
@@ -964,7 +977,7 @@ namespace Pixcren
         ////NotCalculated     計算されません(よくわからん)
 
 
-    
+
 
         /// <summary>
         /// Textがないものをリストに追加していって、Textをもつウィンドウが出た時点で終了、リストを返す
