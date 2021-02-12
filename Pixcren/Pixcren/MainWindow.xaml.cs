@@ -336,6 +336,9 @@ namespace Pixcren
         //メニューウィンドウ付きでキャプチャ時に使用
         private const int LOOP_LIMIT = 10;
 
+        //プレビューウィンドウ
+        internal PreviweWindow MyPreviweWindow;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -627,6 +630,12 @@ namespace Pixcren
 
                 //保存
                 BitmapSource bitmap = MakeBitmapForSave(screen, myRectList);
+
+                //プレビューウィンドウに表示
+                if(MyPreviweWindow != null & bitmap != null)
+                {
+                    MyPreviweWindow.MyImage.Source = bitmap;
+                }
 
                 //クリップボードにコピー、BMPとPNG形式の両方
                 //BMPはアルファ値が255になってしまう、PNGはアルファ値保持するけど、貼り付けはアプリの対応が必要
@@ -2388,6 +2397,7 @@ namespace Pixcren
 
         #endregion キャプチャ時の音関係
 
+        #region ボタンクリックとかのイベント
         private void MyButtonHelpDateTimeStringformat_Click(object sender, RoutedEventArgs e)
         {
             if (IsDateformatShow) return;
@@ -2456,7 +2466,19 @@ namespace Pixcren
             UpdateFileNameSample();
         }
 
+        //プレビューウィンドウ
+        private void MyMenuItemOpenPreviewWindow_Click(object sender, RoutedEventArgs e)
+        {
+            if (MyPreviweWindow == null)
+            {
+                MyPreviweWindow = new PreviweWindow(this);
+                //MyPreviweWindow.Owner = this;
+                MyPreviweWindow.Show();
+            }          
+        }
 
+
+        #endregion ボタンクリックとかのイベント
 
         //ウィンドウハンドルからウィンドウの情報用
         //ウィンドウのハンドル、Rect、Text、IsVisible
