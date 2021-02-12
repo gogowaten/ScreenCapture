@@ -488,7 +488,7 @@ namespace Pixcren
                 { CaptureRectType.WindowClient, "ウィンドウのクライアント領域" },
                 { CaptureRectType.UnderCursor, "カーソル下のコントロール" },
                 { CaptureRectType.UnderCursorClient, "カーソル下のクライアント領域" },
-                { CaptureRectType.WindowWithMenu, "ウィンドウ特殊(メニューウィンドウ)" },
+                { CaptureRectType.WindowWithMenu, "ウィンドウ特殊(With枠外メニューウィンドウ)" },
             };
 
 
@@ -619,6 +619,9 @@ namespace Pixcren
                 //Rectの修正
                 myRectList = FixInt32Rects(myRectList, screen.PixelWidth, screen.PixelHeight);
 
+                //サイズが0のRectを除外
+                myRectList = myRectList.Where(x => x.Width > 0 && x.Height > 0).ToList();
+
                 //Rectが一つも取得できなかった場合や、サイズが0なら何もしないで終了、エラーメッセージを出したほうがいい？
                 if (myRectList.Count == 0 || myRectList[0].Width == 0) return;
 
@@ -691,6 +694,7 @@ namespace Pixcren
 
         private Int32Rect FixInt32Rect(Int32Rect r, int w, int h)
         {
+            //値がマイナスなら、長さからマイナス分を切って、座標は0にする
             if (r.X < 0)
             {
                 r.Width += r.X;
@@ -702,10 +706,21 @@ namespace Pixcren
                 r.Y = 0;
             }
 
+            //右端が枠外になる場合、枠外分を切る、切って幅がマイナスなら0にする
             int temp = r.X + r.Width;
-            if (temp > w) r.Width += w - temp;
+            if (temp > w)
+            {
+                r.Width -= temp - w;
+                if (r.Width < 0) r.Width = 0;
+            }
+
             temp = r.Y + r.Height;
-            if (temp > h) r.Height += h - temp;
+            if (temp > h)
+            {
+                r.Height -= temp - h;
+                if (r.Height < 0) r.Height = 0;
+            }
+
             return r;
         }
 
@@ -1901,9 +1916,16 @@ namespace Pixcren
         private BitmapSource MakeBitmapForSave(BitmapSource source, List<Int32Rect> reList)
         {
             List<Rect> re = new();
-            foreach (var item in reList)
+            try
             {
-                re.Add(new Rect(item.X, item.Y, item.Width, item.Height));
+                foreach (var item in reList)
+                {
+                    re.Add(new Rect(item.X, item.Y, item.Width, item.Height));
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"{ex}");
             }
             return MakeBitmapForSave(source, re);
         }
