@@ -2472,7 +2472,7 @@ namespace Pixcren
             if (MyPreviweWindow == null)
             {
                 MyPreviweWindow = new PreviweWindow(this);
-                //MyPreviweWindow.Owner = this;
+                MyPreviweWindow.Owner = this;
                 MyPreviweWindow.Show();
             }          
         }

@@ -5,8 +5,30 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Pixcren"
         mc:Ignorable="d"
-        Title="PreviweWindow" Height="450" Width="600">
+        Title="PreviweWindow" Height="250" Width="600"
+        ResizeMode="CanResizeWithGrip">
   <Grid UseLayoutRounding="True">
-    <Image x:Name="MyImage" StretchDirection="DownOnly"/>
+    <DockPanel x:Name="MyDockPanel">
+
+      <StatusBar DockPanel.Dock="Bottom">
+        <StatusBarItem>
+          <TextBlock Text="status"/>
+        </StatusBarItem>
+        <StatusBarItem x:Name="MyStatusBarItem" Content="text"/>
+      </StatusBar>
+
+
+      <Menu DockPanel.Dock="Top">
+        <MenuItem Header="コピー" Click="MenuItem_Click"/>
+        <MenuItem Header="表示切り替え" Click="MenuItem_Click_1"/>
+      </Menu>
+
+      <ScrollViewer x:Name="MyScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <Image x:Name="MyImage" Stretch="None"/>
+      </ScrollViewer>
+
+
+
+    </DockPanel>
   </Grid>
 </Window>
