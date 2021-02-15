@@ -52,7 +52,7 @@ namespace Pixcren
         //private static extern short GetAsyncKeyState(int vKey);
 
         //Rect取得用
-        private struct RECT
+        public struct RECT
         {
             //型はlongじゃなくてintが正解！！！！！！！！！！！！！！
             //longだとおかしな値になる
@@ -76,8 +76,23 @@ namespace Pixcren
             }
         }
 
-        //[DllImport("user32.dll")]
-        //private static extern IntPtr GetActiveWindow();
+        //ウィンドウ情報用
+        public struct WINDOWINFO
+        {
+            public int cbSize;
+            public RECT rcWindow;
+            public RECT rcClient;
+            public uint dwStyle;
+            public uint dwExStyle;
+            public uint dwWindowStatus;
+            public uint cxWindowBorders;
+            public uint cyWindowBorders;
+            public ushort atomWindowType;
+            public short wCreatorVersion;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetActiveWindow();
 
         //ウィンドウ名取得
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
@@ -178,6 +193,97 @@ namespace Pixcren
         }
         [DllImport("user32.dll")]
         internal static extern bool IsWindowVisible(IntPtr hWnd);
+
+
+
+        [DllImport("user32.dll")]
+        internal static extern int GetWindowInfo(IntPtr hWnd, ref WINDOWINFO info);
+
+        [DllImport("user32.dll")]
+        internal static extern IntPtr GetLastActivePopup(IntPtr hWnd);
+
+        /// <summary>
+        /// 指定したWindowの一番上のChildWindowを返す
+        /// </summary>
+        /// <param name="hWnd">IntPtr.Zeroを指定すると一番上のWindowを返す</param>
+        /// <returns>ChildWindowを持たない場合はnullを返す</returns>
+        [DllImport("user32.dll")]
+        internal static extern IntPtr GetTopWindow(IntPtr hWnd);
+
+        /// <summary>
+        /// 指定したWindowのメニューのハンドルを返す
+        /// </summary>
+        /// <param name="hWnd">Windowのハンドル</param>
+        /// <returns>Windowがメニューを持たない場合はnullを返す</returns>
+        [DllImport("user32.dll")]
+        internal static extern IntPtr GetMenu(IntPtr hWnd);
+
+        /// <summary>
+        /// キーボードフォーカスを持つWindowのハンドルを返す
+        /// </summary>
+        /// <returns></returns>
+        [DllImport("user32.dll")]
+        internal static extern IntPtr GetFocus();
+
+        [DllImport("user32.dll")]
+        internal static extern IntPtr GetMenuBarInfo(IntPtr hWnd, MenuObjectId idObject, long idItem, MENUBARINFO pmbi);
+
+        public struct MENUBARINFO
+        {
+            public long cbSize;
+            public RECT rcBar;
+            public IntPtr hMenu;
+            public bool fBarFocused;
+            public bool fFocused;
+        }
+        public enum MenuObjectId : long
+        {
+            OBJID_CLIENT = 0xFFFFFFFC,
+            OBJID_MENU = 0xFFFFFFFD,
+            OBJID_SYSMENU = 0xFFFFFFFF,
+        }
+
+
+        //        GetTitleBarInfo
+        //https://forums.codeguru.com/showthread.php?443988-GetTitleBarInfo
+
+        [DllImport("user32.dll")]
+        internal static extern bool GetTitleBarInfo(IntPtr hWnd, ref TITLEBARINFO pti);
+        public struct TITLEBARINFO
+        {
+            public int cbSize;
+            public RECT rcTitleBar;
+            public TitleBarButtonStates rgState;
+        }
+        public enum TitleState
+        {
+            STATE_SYSTEM_UNAVAILABLE = 1,
+            STATE_SYSTEM_PRESSED = 8,
+            STATE_SYSTEM_INVISIBLE = 32768,
+            STATE_SYSTEM_OFFSCREEN = 65536,
+            STATE_SYSTEM_FOCUSABLE = 1048576,
+            STATE_SYSTEM_INVISIBLE_AND_FOCUSABLE = 0x00108000,
+        }
+        public struct TitleBarButtonStates
+        {
+            public TitleState TitleBarState;
+            public TitleState Reseved;
+            public TitleState MinState;
+            public TitleState MaxState;
+            public TitleState HelpState;
+            public TitleState CloseState;
+        }
+
+
+
+
+
+
+
+        [DllImport("user32.dll")]
+        internal static extern IntPtr GetMenuItemRect(IntPtr hWnd, IntPtr hMenu, uint uItem, out RECT rect);
+
+
 
 
 
@@ -329,12 +435,12 @@ namespace Pixcren
         public bool IsDateformatShow;
 
         //datetime.tostringの書式、これを既定値にする
-        private const string DATE_TIME_STRING_FORMAT = "yyyyMMdd'_'HH'_'mm'_'ss'_'fff";
+        private const string DATE_TIME_STRING_FORMAT = "yyyyMMdd'_'HHmmss'_'fff";
         //日時の書式一覧画像
         private BitmapSource MyDateTimeStringFormatBitmapSource;
 
         //メニューウィンドウ付きでキャプチャ時に使用
-        private const int LOOP_LIMIT = 10;
+        private const int LOOP_LIMIT = 16;
 
         //プレビューウィンドウ
         internal PreviweWindow MyPreviweWindow;
@@ -490,8 +596,9 @@ namespace Pixcren
                 { CaptureRectType.Window, "ウィンドウ" },
                 { CaptureRectType.WindowClient, "ウィンドウのクライアント領域" },
                 { CaptureRectType.UnderCursor, "カーソル下のコントロール" },
-                { CaptureRectType.UnderCursorClient, "カーソル下のクライアント領域" },
-                { CaptureRectType.WindowWithMenu, "ウィンドウ特殊(With枠外メニューウィンドウ)" },
+                { CaptureRectType.UnderCursorClient, "カーソル下コントロールのクライアント領域" },
+                { CaptureRectType.WindowWithMenu, "ウィンドウ特殊1(With枠外メニューウィンドウ)" },
+                { CaptureRectType.WindowWithRelatedWindow, "ウィンドウ特殊1+(With関連ウィンドウ)" }
             };
 
 
@@ -610,7 +717,13 @@ namespace Pixcren
                         //アプリのウィンドウキャプチャで、枠外のメニューウィンドウもキャプチャ
                         //https://gogowaten.hatenablog.com/entry/2021/02/04/150711
                         //myRectList = MakeForeWindowWithMenuWindowRectList().Select(x => new Int32Rect((int)x.X, (int)x.Y, (int)x.Width, (int)x.Height)).ToList();
-                        myRectList = GetRectListForeWindowWhitMenu().Select(x => new Int32Rect((int)x.X, (int)x.Y, (int)x.Width, (int)x.Height)).ToList();
+                        myRectList = GetRectListForeWindowWhitMenu(false).Select(x => new Int32Rect((int)x.X, (int)x.Y, (int)x.Width, (int)x.Height)).ToList();
+
+                        break;
+
+                    case CaptureRectType.WindowWithRelatedWindow:
+                        //関連ウィンドウをまとめてキャプチャ
+                        myRectList = GetRectListForeWindowWhitMenu(true).Select(x => new Int32Rect((int)x.X, (int)x.Y, (int)x.Width, (int)x.Height)).ToList();
 
                         break;
 
@@ -632,7 +745,7 @@ namespace Pixcren
                 BitmapSource bitmap = MakeBitmapForSave(screen, myRectList);
 
                 //プレビューウィンドウに表示
-                if(MyPreviweWindow != null & bitmap != null)
+                if (MyPreviweWindow != null & bitmap != null)
                 {
                     MyPreviweWindow.MyImage.Source = bitmap;
                 }
@@ -735,13 +848,13 @@ namespace Pixcren
 
         #region メニューウィンドウのRect収集
 
-        private List<Rect> GetRectListForeWindowWhitMenu()
+        private List<Rect> GetRectListForeWindowWhitMenu(bool isRelatedParent)
         {
             List<Rect> R = new();
 
             var fore = GetWindowInfo(GetForegroundWindow());
 
-            //エクセル系アプリ
+            //textがなければエクセル系アプリと判断、下層から選別
             if (fore.Text == "")
             {
                 MyWidndowInfo rootOwner = GetWindowInfo(
@@ -770,7 +883,7 @@ namespace Pixcren
                 //popupウィンドウのRectを追加
                 if (popup.Rect.Width != 0)
                 {
-                    R.Add(popup.Rect);
+                    R.Add(GetWindowRectMitame(popup.hWnd));
                 }
 
                 //ParentのTextが""ならParentは無いので、代わりにRootOwnerのRectを追加
@@ -778,6 +891,12 @@ namespace Pixcren
                 {
                     R.Add(GetWindowRectMitame(rootOwner.hWnd));
                 }
+                //関連ウィンドウを集める場合は、parentをさかのぼって追加
+                else if (isRelatedParent)
+                {
+                    R.AddRange(GetOwnerWindowsInfo(parent.hWnd, LOOP_LIMIT).Select(x => GetWindowRectMitame(x.hWnd)));
+                }
+                //関連ウィンドウを集めない場合、
                 //ParentのTextがあればダイアログボックスウィンドウが最前面なので、そのRectを追加
                 else
                 {
@@ -785,7 +904,7 @@ namespace Pixcren
                 }
             }
 
-            //普通のアプリ
+            //普通のアプリは、上下層から選別
             else
             {
                 GetCursorPos(out POINT cp);
@@ -814,18 +933,56 @@ namespace Pixcren
                 {
                     R = new();
                 }
-                //ForeのRectを追加
-                R.Add(GetWindowRectMitame(fore.hWnd));
+
+                if (isRelatedParent)
+                {
+                    //関連ウィンドウを収集、追加
+                    R.AddRange(GetOwnerWindowsInfo(fore.hWnd, LOOP_LIMIT).Select(x => GetWindowRectMitame(x.hWnd)));
+                }
+                else
+                {
+                    //ForeのRectを追加
+                    R.Add(GetWindowRectMitame(fore.hWnd));
+                }
 
                 //PopupのRectを追加
                 MyWidndowInfo popup = GetWindowInfo(
                     GetWindow(fore.hWnd, GETWINDOW_CMD.GW_ENABLEDPOPUP));
 
-                if (popup.Rect.Width != 0) R.Add(popup.Rect);
+                if (popup.Rect.Width != 0) R.Add(GetWindowRectMitame(popup.hWnd));
+
+                //var nekoneko = GetWindowInfo(GetParent(cursor.hWnd));
+                //var inu = GetWindowInfo(GetWindow(cursor.hWnd, GETWINDOW_CMD.GW_OWNER));
+                //var ro = GetWindowInfo(GetAncestor(cursor.hWnd, AncestorType.GA_ROOTOWNER));
+                //var act = GetWindowInfo(GetActiveWindow());
+
 
                 //ForegroundのウィンドウRectだけでいい
             }
             return R;
+        }
+        /// <summary>
+        /// 基準になる最初のウィンドウを指定してOwnerをさかのぼって情報収集
+        /// </summary>
+        /// <param name="hWnd">最初のウィンドウ、これもリストに入る</param>
+        /// <param name="count">遡る上限数</param>
+        /// <returns></returns>
+        private List<MyWidndowInfo> GetOwnerWindowsInfo(IntPtr hWnd, int count)
+        {
+            List<MyWidndowInfo> infos = new();
+            infos.Add(GetWindowInfo(hWnd));
+            IntPtr temp = hWnd;
+            for (int i = 0; i < count; i++)
+            {
+                MyWidndowInfo parent = GetWindowInfo(GetWindow(temp, GETWINDOW_CMD.GW_OWNER));
+                if (parent.Text != "")
+                {
+                    infos.Add(parent);
+                    temp = parent.hWnd;
+                }
+                else return infos;
+            }
+            return infos;
         }
 
 
@@ -928,6 +1085,8 @@ namespace Pixcren
         {
             //可視状態のものだけ残す
             pList = pList.Where(x => x.IsVisible == true).ToList();
+
+
             //Textを持つウィンドウ以降を除去
             pList = DeleteWithTextWindow(pList);
             //残ったウィンドウの見た目通りのRect取得
@@ -2474,7 +2633,7 @@ namespace Pixcren
                 MyPreviweWindow = new PreviweWindow(this);
                 MyPreviweWindow.Owner = this;
                 MyPreviweWindow.Show();
-            }          
+            }
         }
 
 
@@ -2652,6 +2811,7 @@ namespace Pixcren
         UnderCursor,
         UnderCursorClient,
         WindowWithMenu,
+        WindowWithRelatedWindow,
 
     }
 

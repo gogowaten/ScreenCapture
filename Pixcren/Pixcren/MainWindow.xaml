@@ -111,7 +111,8 @@
                           IsChecked="{Binding Path=IsFileNameDate}"
                           Click="CheckBox_Click"/>
                 <ComboBox Name="MyComboBoxFileNameDateOrder" SelectedValue="{Binding Path=FileNameDateOrder}" TabIndex="2"
-                          SelectionChanged="MyComboBoxFileNameOrder_SelectionChanged"/>
+                          SelectionChanged="MyComboBoxFileNameOrder_SelectionChanged"
+                          ToolTip="挿入位置、0なら先頭(text1の前)、1.5ならtext1とtext2の間"/>
                 <Button DockPanel.Dock="Right" Content="削除" Click="MyButtonRemoveFileNameDateFromat_Click" IsTabStop="False"
                             Tag="{Binding ElementName=MyComboBoxFileNameDateFormat}"/>
                 <Button DockPanel.Dock="Right" Content="追加" TabIndex="4"
@@ -120,13 +121,15 @@
                           ItemsSource="{Binding Path=FileNameDateFormatList}"
                           Text="{Binding Path=FileNameDataFormat}"
                           SelectionChanged="MyComboBoxFileNameDateFormat_SelectionChanged"
-                          PreviewKeyUp="MyComboBoxFileNameDateFormat_PreviewKeyUp"/>
+                          PreviewKeyUp="MyComboBoxFileNameDateFormat_PreviewKeyUp"
+                          ToolTip="日時の書式、空白なら年月日時分秒になる"/>
               </DockPanel>
               <StackPanel Orientation="Horizontal">
                 <CheckBox Content="連番" IsChecked="{Binding Path=IsFileNameSerial}"
                           Click="CheckBox_Click"/>
                 <ComboBox Name="MyComboBoxFileNameSerialOrder" SelectedValue="{Binding Path=FileNameSerialOrder}"
-                          SelectionChanged="MyComboBoxFileNameOrder_SelectionChanged"/>
+                          SelectionChanged="MyComboBoxFileNameOrder_SelectionChanged"
+                          ToolTip="挿入位置、0なら先頭(text1の前)、1.5ならtext1とtext2の間"/>
                 <myCtrl:NumericUpDown Name="MyNumericUpDownFileNameSerial"
                                       MyValue="{Binding Path=FileNameSerial, Mode=TwoWay}"
                                       MinWidth="100"
@@ -223,7 +226,8 @@
           <ComboBox Name="MyComboBoxHotKey" IsEditable="True"
                     SelectedValue="{Binding Path=HotKey}"
                     PreviewKeyDown="MyComboBoxHotKey_PreviewKeyDown"
-                    PreviewKeyUp="MyComboBoxHotKey_PreviewKeyUp"/>
+                    PreviewKeyUp="MyComboBoxHotKey_PreviewKeyUp"
+                    ToolTip="ここでキーを押せば変更できるけど、&#xa;初期値のSnapshot(PrintScreen)が無難、&#xa;もしくはCtrl + Snapshot"/>
         </DockPanel>
       </GroupBox>
 
