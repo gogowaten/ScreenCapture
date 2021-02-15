@@ -40,6 +40,16 @@ namespace Pixcren
             var main = MyMainWindow.PointToScreen(new Point());
             this.Top = main.Y + 130;
             this.Left = main.X;
+
+//            WPFで、スクリーンの正確な解像度を取得する方法 | // もちぶろ
+//https://slash-mochi.net/?p=3370
+
+            //ウィンドウサイズはデスクトップ解像度の半分
+            Matrix displayScale = PresentationSource.FromVisual(MyMainWindow).CompositionTarget.TransformToDevice;
+            //var vw = SystemParameters.VirtualScreenWidth;//マルチ画面のときはこれ
+            //var psw = SystemParameters.PrimaryScreenWidth;//プリマリの解像度？
+            this.Height = SystemParameters.PrimaryScreenHeight * displayScale.M11 / 2;
+            this.Width = SystemParameters.PrimaryScreenWidth * displayScale.M22 / 2;
         }
 
 

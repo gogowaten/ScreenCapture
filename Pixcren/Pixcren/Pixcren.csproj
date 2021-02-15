@@ -12,11 +12,16 @@
     <AssemblyVersion>1.2.2.0</AssemblyVersion>
     <FileVersion>1.2.2.0</FileVersion>
     <Version>1.2.2</Version>
+    <PackageIcon>hasu4.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="DatetimeToStringFormat.png" />
     <None Remove="pekowave2.wav" />
+    <None Include="..\..\..\2021WPF\20210212_WinAPI_GetWindowInfo\20210212_WinAPI_GetWindowInfo\hasu4.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
