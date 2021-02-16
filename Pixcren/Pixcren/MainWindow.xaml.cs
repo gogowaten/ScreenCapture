@@ -420,7 +420,7 @@ namespace Pixcren
 
 
         //アプリ情報
-        private const string AppName = "Pixcren";
+        private const string APP_NAME = "Pixcren";
         private string AppVersion;
 
         //ホットキー
@@ -477,10 +477,7 @@ namespace Pixcren
             //            カスタム日時形式文字列 | Microsoft Docs
             //https://docs.microsoft.com/ja-jp/dotnet/standard/base-types/custom-date-and-time-format-strings
 
-            //実行ファイルのバージョン取得
-            var cl = Environment.GetCommandLineArgs();
-            AppVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(cl[0]).FileVersion;
-
+          
 
             //実行ファイルのあるディレクトリ取得
             AppDir = Environment.CurrentDirectory;//.NET5より使用可能            
@@ -519,8 +516,12 @@ namespace Pixcren
                 MyComboBoxSaveDirectory.Text = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             }
 
-            //タイトル
-            this.Title = AppName + AppVersion;
+
+            //実行ファイルのバージョン取得
+            var cl = Environment.GetCommandLineArgs();
+            AppVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(cl[0]).FileVersion;
+            //タイトルをアプリの名前 + バージョン
+            this.Title = APP_NAME + AppVersion;
 
 
         }
@@ -961,10 +962,10 @@ namespace Pixcren
 
                 if (popup.Rect.Width != 0) R.Add(GetWindowRectMitame(popup.hWnd));
 
-                //var nekoneko = GetWindowInfo(GetParent(cursor.hWnd));
-                //var inu = GetWindowInfo(GetWindow(cursor.hWnd, GETWINDOW_CMD.GW_OWNER));
-                //var ro = GetWindowInfo(GetAncestor(cursor.hWnd, AncestorType.GA_ROOTOWNER));
-                //var act = GetWindowInfo(GetActiveWindow());
+                var cParent = GetWindowInfo(GetParent(cursor.hWnd));
+                var cOwner = GetWindowInfo(GetWindow(cursor.hWnd, GETWINDOW_CMD.GW_OWNER));
+                var cRoot = GetWindowInfo(GetAncestor(cursor.hWnd, AncestorType.GA_ROOTOWNER));
+                var act = GetWindowInfo(GetActiveWindow());
 
 
                 //ForegroundのウィンドウRectだけでいい
@@ -984,11 +985,11 @@ namespace Pixcren
             IntPtr temp = hWnd;
             for (int i = 0; i < count; i++)
             {
-                MyWidndowInfo parent = GetWindowInfo(GetWindow(temp, GETWINDOW_CMD.GW_OWNER));
-                if (parent.Text != "")
+                MyWidndowInfo target = GetWindowInfo(GetWindow(temp, GETWINDOW_CMD.GW_OWNER));
+                if (target.Text != "")
                 {
-                    infos.Add(parent);
-                    temp = parent.hWnd;
+                    infos.Add(target);
+                    temp = target.hWnd;
                 }
                 else return infos;
             }
@@ -2159,7 +2160,7 @@ namespace Pixcren
         private BitmapMetadata MakeMetadata()
         {
             BitmapMetadata data = null;
-            string software = AppName + "_" + AppVersion;
+            string software = APP_NAME + "_" + AppVersion;
             switch (ComboBoxSaveFileType.SelectedValue)
             {
                 case ImageType.png:

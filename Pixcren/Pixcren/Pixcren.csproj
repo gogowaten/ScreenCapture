@@ -9,9 +9,9 @@
     <Authors>gogowaten</Authors>
     <Description>スクリーンショット、画面キャプチャ</Description>
     <Copyright>午後わてん</Copyright>
-    <AssemblyVersion>1.2.3.0</AssemblyVersion>
-    <FileVersion>1.2.3.0</FileVersion>
-    <Version>1.2.3</Version>
+    <AssemblyVersion>1.2.4.0</AssemblyVersion>
+    <FileVersion>1.2.4.0</FileVersion>
+    <Version>1.2.4</Version>
     <PackageIcon></PackageIcon>
     <ApplicationIcon>hasu4.ico</ApplicationIcon>
   </PropertyGroup>
