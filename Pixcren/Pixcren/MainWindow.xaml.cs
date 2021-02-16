@@ -717,13 +717,19 @@ namespace Pixcren
                         //アプリのウィンドウキャプチャで、枠外のメニューウィンドウもキャプチャ
                         //https://gogowaten.hatenablog.com/entry/2021/02/04/150711
                         //myRectList = MakeForeWindowWithMenuWindowRectList().Select(x => new Int32Rect((int)x.X, (int)x.Y, (int)x.Width, (int)x.Height)).ToList();
-                        myRectList = GetRectListForeWindowWhitMenu(false).Select(x => new Int32Rect((int)x.X, (int)x.Y, (int)x.Width, (int)x.Height)).ToList();
+                        myRectList = GetRectListForeWindowWhitMenu(false)
+                            .Select(
+                            x => new Int32Rect((int)x.X, (int)x.Y, (int)x.Width, (int)x.Height))
+                            .ToList();
 
                         break;
 
                     case CaptureRectType.WindowWithRelatedWindow:
-                        //関連ウィンドウをまとめてキャプチャ
-                        myRectList = GetRectListForeWindowWhitMenu(true).Select(x => new Int32Rect((int)x.X, (int)x.Y, (int)x.Width, (int)x.Height)).ToList();
+                        //メニューウィンドウに加えて、関連ウィンドウもまとめてキャプチャ
+                        myRectList = GetRectListForeWindowWhitMenu(true)
+                            .Select(
+                            x => new Int32Rect((int)x.X, (int)x.Y, (int)x.Width, (int)x.Height))
+                            .ToList();
 
                         break;
 
@@ -894,7 +900,9 @@ namespace Pixcren
                 //関連ウィンドウを集める場合は、parentをさかのぼって追加
                 else if (isRelatedParent)
                 {
-                    R.AddRange(GetOwnerWindowsInfo(parent.hWnd, LOOP_LIMIT).Select(x => GetWindowRectMitame(x.hWnd)));
+                    R.AddRange(
+                        GetOwnerWindowsInfo(parent.hWnd, LOOP_LIMIT)
+                        .Select(x => GetWindowRectMitame(x.hWnd)));
                 }
                 //関連ウィンドウを集めない場合、
                 //ParentのTextがあればダイアログボックスウィンドウが最前面なので、そのRectを追加
@@ -937,7 +945,9 @@ namespace Pixcren
                 if (isRelatedParent)
                 {
                     //関連ウィンドウを収集、追加
-                    R.AddRange(GetOwnerWindowsInfo(fore.hWnd, LOOP_LIMIT).Select(x => GetWindowRectMitame(x.hWnd)));
+                    R.AddRange(
+                        GetOwnerWindowsInfo(fore.hWnd, LOOP_LIMIT)
+                        .Select(x => GetWindowRectMitame(x.hWnd)));
                 }
                 else
                 {
