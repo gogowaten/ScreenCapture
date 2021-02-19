@@ -444,6 +444,8 @@ namespace Pixcren
 
         //プレビューウィンドウ
         internal PreviweWindow MyPreviweWindow;
+        internal ObservableCollection<PreviewItem> MyPreviewItems;
+
 
         public MainWindow()
         {
@@ -526,12 +528,15 @@ namespace Pixcren
 
         }
 
+     
+
+
         private void MyComboBoxFileNameText_PreviewKeyUp(object sender, KeyEventArgs e)
         {
             if (sender is not ComboBox cb) return;
             if (string.IsNullOrWhiteSpace(cb.Text)) return;
             //無効なファイル名なら枠色を赤にする
-            if (CheckFileNameValidid(cb.Text))
+            if (CheckFileNameValidated(cb.Text))
             {
                 cb.Foreground = SystemColors.ControlTextBrush;
             }
@@ -548,7 +553,7 @@ namespace Pixcren
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
-        private bool CheckFileNameValidid(string name)
+        private bool CheckFileNameValidated(string name)
         {
             if (string.IsNullOrWhiteSpace(name)) return false;
             char[] invalid = System.IO.Path.GetInvalidFileNameChars();
@@ -748,17 +753,18 @@ namespace Pixcren
                 //Rectが一つも取得できなかった場合や、サイズが0なら何もしないで終了、エラーメッセージを出したほうがいい？
                 if (myRectList.Count == 0 || myRectList[0].Width == 0) return;
 
-                //保存
+                //保存画像作成
                 BitmapSource bitmap = MakeBitmapForSave(screen, myRectList);
 
-                //プレビューウィンドウに表示
-                if (MyPreviweWindow != null & bitmap != null)
-                {
-                    MyPreviweWindow.MyImage.Source = bitmap;
-                }
+                //有効なファイル名なら続行
+                string fileName = MakeFileName();
+                bool isFileNameValidated = CheckFileNameValidated(fileName);
+                string fullPath = MakeFullPath(directory, MakeFileName(), MyAppConfig.ImageType.ToString());
+
 
                 //クリップボードにコピー、BMPとPNG形式の両方
                 //BMPはアルファ値が255になってしまう、PNGはアルファ値保持するけど、貼り付けはアプリの対応が必要
+                bool isSavedDone = false;
                 if (MyCheckBoxIsOutputToClipboardOnly.IsChecked == true)
                 {
                     try
@@ -785,20 +791,18 @@ namespace Pixcren
                             $"{ex.Message}", "エラー発生");
                     }
                 }
+                
                 //ファイルに保存
                 else
                 {
-                    //有効なファイル名なら続行
-                    string fileName = MakeFileName();
-                    if (CheckFileNameValidid(fileName))
+                    if (isFileNameValidated)
                     {
-                        string fullPath = MakeFullPath(directory, MakeFileName(), MyAppConfig.ImageType.ToString());
-
                         SaveBitmap(bitmap, fullPath);
                         //連番に加算
                         if (MyAppConfig.IsFileNameSerial) AddIncrementToSerial();
                         //音
                         PlayMySound();
+                        isSavedDone = true;
                     }
                     else
                     {
@@ -807,6 +811,14 @@ namespace Pixcren
 
                 }
 
+                //プレビューウィンドウに表示
+                if (isFileNameValidated && MyPreviweWindow != null && bitmap != null)
+                {                    
+                    MyPreviewItems.Add(new PreviewItem(fileName, bitmap, fullPath,isSavedDone));
+                    ListBox lb = MyPreviweWindow.MyListBox;
+                    lb.SelectedIndex = MyPreviewItems.Count-1;
+                    lb.ScrollIntoView(lb.SelectedItem);
+                }
             }
         }
 
@@ -1551,7 +1563,7 @@ namespace Pixcren
             return mod;
         }
 
-        #endregion
+        #endregion ホットキー
 
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -1920,9 +1932,12 @@ namespace Pixcren
             //MyAppConfig.DirList.Add("dummy dir");
             var neko = MyComboBoxCaputureRect.SelectedValue;
             //var unu = MyRadioButtonFileNameDate.IsChecked;
-            var uma = MakeFileName();
+            var uma = MyPreviweWindow;
             var tako = MyAppConfig;
-            MessageBox.Show($"{AppDir}");
+            var inu = MyPreviewItems;
+            
+
+            //MessageBox.Show($"{AppDir}");
         }
 
 
@@ -2123,7 +2138,7 @@ namespace Pixcren
             return bitmap;
         }
 
-        private void SaveBitmap(BitmapSource bitmap, string fullPath)
+        internal void SaveBitmap(BitmapSource bitmap, string fullPath)
         {
             //CroppedBitmapで切り抜いた画像でBitmapFrame作成して保存
             BitmapEncoder encoder = GetEncoder();
@@ -2356,7 +2371,7 @@ namespace Pixcren
         {
             string fileName = MakeFileName() + "." + MyAppConfig.ImageType.ToString();
             MyTextBoxFileNameSample.Text = fileName;
-            if (CheckFileNameValidid(fileName))
+            if (CheckFileNameValidated(fileName))
             {
                 MyTextBoxFileNameSample.Foreground = SystemColors.ControlTextBrush;
             }
@@ -2376,7 +2391,7 @@ namespace Pixcren
             var button = sender as Button;
             if (button.Tag is ComboBox cb)
             {
-                if (CheckFileNameValidid(cb.Text))
+                if (CheckFileNameValidated(cb.Text))
                 {
                     AddTextToComboBox(cb.Text, list, cb);
                 }
@@ -2468,7 +2483,7 @@ namespace Pixcren
             {
                 return false;
             }
-            if (CheckFileNameValidid(fileName)) return true;
+            if (CheckFileNameValidated(fileName)) return true;
             else return false;
         }
 
@@ -2591,7 +2606,7 @@ namespace Pixcren
             //無効なファイル名なら枠色を赤にする
             try
             {
-                if (CheckFileNameValidid(now.ToString(cbText)))
+                if (CheckFileNameValidated(now.ToString(cbText)))
                 {
                     cb.Foreground = SystemColors.ControlTextBrush;
                 }
@@ -2641,9 +2656,11 @@ namespace Pixcren
         {
             if (MyPreviweWindow == null)
             {
-                MyPreviweWindow = new PreviweWindow(this);
+                MyPreviewItems = new ObservableCollection<PreviewItem>();
+                MyPreviweWindow = new PreviweWindow(this,MyPreviewItems);
                 MyPreviweWindow.Owner = this;
                 MyPreviweWindow.Show();
+                MyPreviweWindow.DataContext = MyPreviewItems;
             }
         }
 
@@ -2922,9 +2939,18 @@ namespace Pixcren
     /// </summary>
     public class PreviewItem
     {
+        public PreviewItem(string name, BitmapSource image, string savePath, bool isSavedDone)
+        {
+            Name = name;
+            Image = image;
+            SavePath = savePath;
+            IsSavedDone = isSavedDone;
+        }
+
         public string Name { get; set; }
         public BitmapSource Image { get; set; }
         public string SavePath { get; set; }
+        public bool IsSavedDone { get; set; }
 
     }
 }

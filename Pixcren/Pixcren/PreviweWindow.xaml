@@ -7,6 +7,9 @@
         mc:Ignorable="d"
         Title="PreviweWindow" Height="250" Width="600"
         ResizeMode="CanResizeWithGrip">
+  <Window.Resources>
+    <local:MyConverterButtonVisible x:Key="buttonVisible"/>
+  </Window.Resources>
   <Grid UseLayoutRounding="True">
     <DockPanel x:Name="MyDockPanel">
 
@@ -20,11 +23,28 @@
 
       <Menu DockPanel.Dock="Top">
         <MenuItem Header="コピー" Click="MenuItem_Click"/>
+        <MenuItem Header="remove" Name="MyMenuItemRemove" Click="MyMenuItemRemove_Click"/>
         <MenuItem Header="表示切り替え" Click="MenuItem_Click_1"/>
       </Menu>
 
+      <ListBox x:Name="MyListBox" ItemsSource="{Binding}" SelectionMode="Extended"
+               SelectionChanged="ListBox_SelectionChanged"
+               MouseWheel="MyListBox_MouseWheel">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <DockPanel Margin="10, 12" MouseWheel="MyListBox_MouseWheel">
+              <Button DockPanel.Dock="Top" Content="保存" Click="Button_Click"
+                      Visibility="{Binding IsSavedDone, Converter={StaticResource buttonVisible}}"/>
+              <TextBlock DockPanel.Dock="Top" Text="{Binding Path=Name}"/>
+              <Image Source="{Binding Path=Image}" StretchDirection="DownOnly"
+                     Width="200" Height="100"/>
+            </DockPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      
       <ScrollViewer x:Name="MyScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-        <Image x:Name="MyImage" Stretch="None"/>
+        <Image x:Name="MyImage" Stretch="None" Source="{Binding Path=Image}"/>
       </ScrollViewer>
 
 
