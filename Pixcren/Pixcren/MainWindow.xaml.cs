@@ -2915,4 +2915,16 @@ namespace Pixcren
 
         }
     }
+
+
+    /// <summary>
+    /// プレビューウィンドウにBindingする値
+    /// </summary>
+    public class PreviewItem
+    {
+        public string Name { get; set; }
+        public BitmapSource Image { get; set; }
+        public string SavePath { get; set; }
+
+    }
 }
