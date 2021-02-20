@@ -23,7 +23,7 @@
 
       <Menu DockPanel.Dock="Top">
         <MenuItem Header="コピー" Click="MenuItem_Click"/>
-        <MenuItem Header="remove" Name="MyMenuItemRemove" Click="MyMenuItemRemove_Click"/>
+        <MenuItem Header="削除" Name="MyMenuItemRemove" Click="MyMenuItemRemove_Click"/>
         <MenuItem Header="表示切り替え" Click="MenuItem_Click_1"/>
       </Menu>
 

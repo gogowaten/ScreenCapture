@@ -479,7 +479,7 @@ namespace Pixcren
             //            カスタム日時形式文字列 | Microsoft Docs
             //https://docs.microsoft.com/ja-jp/dotnet/standard/base-types/custom-date-and-time-format-strings
 
-          
+
 
             //実行ファイルのあるディレクトリ取得
             AppDir = Environment.CurrentDirectory;//.NET5より使用可能            
@@ -528,7 +528,7 @@ namespace Pixcren
 
         }
 
-     
+
 
 
         private void MyComboBoxFileNameText_PreviewKeyUp(object sender, KeyEventArgs e)
@@ -791,7 +791,7 @@ namespace Pixcren
                             $"{ex.Message}", "エラー発生");
                     }
                 }
-                
+
                 //ファイルに保存
                 else
                 {
@@ -813,10 +813,10 @@ namespace Pixcren
 
                 //プレビューウィンドウに表示
                 if (isFileNameValidated && MyPreviweWindow != null && bitmap != null)
-                {                    
-                    MyPreviewItems.Add(new PreviewItem(fileName, bitmap, fullPath,isSavedDone));
+                {
+                    MyPreviewItems.Add(new PreviewItem(fileName, bitmap, fullPath, isSavedDone));
                     ListBox lb = MyPreviweWindow.MyListBox;
-                    lb.SelectedIndex = MyPreviewItems.Count-1;
+                    lb.SelectedIndex = MyPreviewItems.Count - 1;
                     lb.ScrollIntoView(lb.SelectedItem);
                 }
             }
@@ -1935,7 +1935,7 @@ namespace Pixcren
             var uma = MyPreviweWindow;
             var tako = MyAppConfig;
             var inu = MyPreviewItems;
-            
+
 
             //MessageBox.Show($"{AppDir}");
         }
@@ -2657,7 +2657,7 @@ namespace Pixcren
             if (MyPreviweWindow == null)
             {
                 MyPreviewItems = new ObservableCollection<PreviewItem>();
-                MyPreviweWindow = new PreviweWindow(this,MyPreviewItems);
+                MyPreviweWindow = new PreviweWindow(this, MyPreviewItems);
                 MyPreviweWindow.Owner = this;
                 MyPreviweWindow.Show();
                 MyPreviweWindow.DataContext = MyPreviewItems;
@@ -2937,8 +2937,10 @@ namespace Pixcren
     /// <summary>
     /// プレビューウィンドウにBindingする値
     /// </summary>
-    public class PreviewItem
+    public class PreviewItem : INotifyPropertyChanged
     {
+        private bool isSavedDone;
+
         public PreviewItem(string name, BitmapSource image, string savePath, bool isSavedDone)
         {
             Name = name;
@@ -2950,7 +2952,34 @@ namespace Pixcren
         public string Name { get; set; }
         public BitmapSource Image { get; set; }
         public string SavePath { get; set; }
-        public bool IsSavedDone { get; set; }
+
+        //保存の有無判定用、保存していなければボタンを表示しておいて、保存したらボタンを非表示に切り替える用
+        //通知する必要があったのでこうなった
+        public bool IsSavedDone
+        {
+            get
+            {
+                return isSavedDone;
+            }
+
+            set
+            {
+                if (IsSavedDone == value)
+                {
+                    return;
+                }
+                isSavedDone = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void RaisePropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+
 
     }
 }

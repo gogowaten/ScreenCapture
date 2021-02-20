@@ -34,9 +34,59 @@ namespace Pixcren
 
             Closed += PreviweWindow_Closed;
             this.Loaded += PreviweWindow_Loaded;
-
+            this.PreviewKeyDown += PreviweWindow_PreviewKeyDown;
         }
 
+
+
+
+        #region ショートカットキー
+        private void PreviweWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            switch (Keyboard.Modifiers)
+            {
+                case ModifierKeys.None:
+                    switch (e.Key)
+                    {
+                        case Key.Delete:
+                            RemoveItem();
+                            break;
+
+                        default:
+                            break;
+                    }
+                    break;
+                case ModifierKeys.Alt:
+                    break;
+                case ModifierKeys.Control:
+                    switch (e.Key)
+                    {
+                        case Key.A:
+                            MyListBox.SelectAll();
+                            break;
+
+                        case Key.C:
+                            CopyImage();
+                            break;
+
+                        case Key.S:
+                            SaveImage();
+                            break;
+
+                        default:
+                            break;
+                    }
+                    break;
+                case ModifierKeys.Shift:
+                    break;
+                case ModifierKeys.Windows:
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        #endregion ショートカットキー
 
         //起動直後
         private void PreviweWindow_Loaded(object sender, RoutedEventArgs e)
@@ -69,6 +119,10 @@ namespace Pixcren
         //クリップボードに画像コピー
         private void MenuItem_Click(object sender, RoutedEventArgs e)
         {
+            CopyImage();
+        }
+        private void CopyImage()
+        {
             var bmp = (BitmapSource)MyImage.Source;
             if (bmp == null) return;
             try
@@ -82,16 +136,14 @@ namespace Pixcren
                 data.SetData("PNG", ms);
                 Clipboard.SetDataObject(data, true);
 
-
-                MyStatusBarItem.Content = $"{GetNowText()} : クリップボードにコピーした";
+                var item = (PreviewItem)MyListBox.SelectedItem;
+                UpdateStatusText($"{item.Name}をクリップボードにコピーした");
             }
             catch (Exception ex)
             {
-                //var ima = DateTime.Now;
-                MyStatusBarItem.Content = $"{GetNowText()} : クリップボードにコピーできなかった";
-                MessageBox.Show($"なんかのエラーでコピーできなかった\n{ex}", "エラー発生");
+                UpdateStatusText($"クリップボードにコピーできなかった");
+                MessageBox.Show($"なんかのエラーでコピーできなかった、まれによくある\n{ex}", "エラー発生");
             }
-
         }
         private string GetNowText()
         {
@@ -102,22 +154,18 @@ namespace Pixcren
         //表示切り替え、原寸とウィンドウサイズに合わせる
         private void MenuItem_Click_1(object sender, RoutedEventArgs e)
         {
-            //var v = MyScrollViewer.Visibility;
-            //if (v == Visibility.Visible) MyScrollViewer.Visibility = Visibility.Collapsed;
-            //else MyScrollViewer.Visibility = Visibility.Visible;
-
-            //if (MyScrollViewer.Content == null)
-            //{
-            //    MyDockPanel.Children.Remove(MyImage);
-            //    MyScrollViewer.Content = MyImage;
-            //    MyImage.Stretch = Stretch.None;
-            //}
-            //else
-            //{
-            //    MyScrollViewer.Content = null;
-            //    MyDockPanel.Children.Add(MyImage);
-            //    MyImage.Stretch = Stretch.Uniform;
-            //}
+            if (MyScrollViewer.Content == null)
+            {
+                MyDockPanel.Children.Remove(MyImage);
+                MyScrollViewer.Content = MyImage;
+                MyImage.Stretch = Stretch.None;
+            }
+            else
+            {
+                MyScrollViewer.Content = null;
+                MyDockPanel.Children.Add(MyImage);
+                MyImage.Stretch = Stretch.Uniform;
+            }
         }
 
         private void ListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -130,25 +178,34 @@ namespace Pixcren
             else MyImage.Source = null;
         }
 
+        //画像保存
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            var b = (Button)sender;
-            var data = (PreviewItem)b.DataContext;
-            try
-            {
-                MyMainWindow.SaveBitmap(data.Image, data.SavePath);
-                b.Visibility = Visibility.Collapsed;
-                //data.IsSavedDone = true;
-                MyStatusBarItem.Content = $"{GetNowText()} : {data.SavePath}に保存した";
-            }
-            catch (Exception ex)
-            {
-                MyStatusBarItem.Content = $"{GetNowText()} : {data.SavePath}の保存失敗した";
-                MessageBox.Show($"セーブできなかった\n{ex}");
-            }
-
-
+            SaveImage();
         }
+        private void SaveImage()
+        {
+            //選択中のアイテムからリスト作成
+            System.Collections.IList saveList = MyListBox.SelectedItems;
+            if (saveList == null) return;
+
+            foreach (PreviewItem item in saveList)
+            {
+                try
+                {
+                    MyMainWindow.SaveBitmap(item.Image, item.SavePath);
+                    item.IsSavedDone = true;
+                    UpdateStatusText($"{item.SavePath}に保存した");
+                }
+                catch (Exception ex)
+                {
+                    UpdateStatusText($"{item.SavePath}の保存に失敗した");
+                    MessageBox.Show($"セーブできなかった\n{ex}");
+                    break;
+                }
+            }
+        }
+
 
         //アイテム削除
         private void RemoveItem()
@@ -179,23 +236,51 @@ namespace Pixcren
                 //MyMainWindow.MyPreviewItems = temp;
                 //this.DataContext = MyMainWindow.MyPreviewItems;
 
-//                [C#] 初心者が陥った例外・問題まとめ - Qiita
-//https://qiita.com/nori0__/items/58d97201b479c3556e39
+                //                [C#] 初心者が陥った例外・問題まとめ - Qiita
+                //https://qiita.com/nori0__/items/58d97201b479c3556e39
 
                 //削除リストから新規削除アイテムリスト作成、それをもとに普通に削除
                 //こっちのほうがエレガントな気がする
                 System.Collections.ObjectModel.ObservableCollection<PreviewItem> temp = new();
+                int maxId = 0;//削除アイテムの中で最大のインデックス
                 foreach (PreviewItem item in removeList)
                 {
+                    int id = MyMainWindow.MyPreviewItems.IndexOf(item);
+                    if (maxId < id) maxId = id;
                     temp.Add(item);
                 }
 
+                //削除
+                int removeCount = removeList.Count;//削除数、削除する前にここで記録
                 foreach (var item in temp)
                 {
                     MyMainWindow.MyPreviewItems.Remove(item);
+                    UpdateStatusText($"{item.Name}を削除した");
                 }
+
+                //次の選択アイテム決定
+                //削除アイテムの中で一番下の一個下を選択するには
+                //削除アイテムの中で最大のインデックス + 1 - 削除数
+                int selectId = maxId + 1 - removeCount;
+                if (selectId < 0) selectId = 0;
+                if (selectId >= MyMainWindow.MyPreviewItems.Count)
+                {
+                    selectId = MyMainWindow.MyPreviewItems.Count - 1;
+                }
+
+                MyListBox.SelectedIndex = selectId;
+
             }
         }
+
+
+        //ステータスバーに表示している文字列を更新
+        private void UpdateStatusText(string message)
+        {
+            MyStatusBarItem.Content = $"{GetNowText()} : {message}";
+        }
+
+
 
         //Item削除
         private void MyMenuItemRemove_Click(object sender, RoutedEventArgs e)
@@ -235,7 +320,7 @@ namespace Pixcren
         {
             bool b = (bool)value;
             Visibility v;
-            if (b)
+            if (b == true)
             {
                 v = Visibility.Collapsed;
             }
