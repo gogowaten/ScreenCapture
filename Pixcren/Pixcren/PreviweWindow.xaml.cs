@@ -31,11 +31,13 @@ namespace Pixcren
             //MyPreviewItems = items;
 
 
-
             Closed += PreviweWindow_Closed;
             this.Loaded += PreviweWindow_Loaded;
-            this.PreviewKeyDown += PreviweWindow_PreviewKeyDown;
+            this.PreviewKeyDown += PreviweWindow_PreviewKeyDown;//ショートカットキー
+
         }
+
+
 
 
 
@@ -70,7 +72,7 @@ namespace Pixcren
                             break;
 
                         case Key.S:
-                            SaveImage();
+                            SaveImage(MyListBox.SelectedItems);
                             break;
 
                         default:
@@ -116,11 +118,7 @@ namespace Pixcren
             MyMainWindow.MyPreviweWindow = null;
         }
 
-        //クリップボードに画像コピー
-        private void MenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            CopyImage();
-        }
+        //クリップボードに画像コピー    
         private void CopyImage()
         {
             var bmp = (BitmapSource)MyImage.Source;
@@ -178,31 +176,27 @@ namespace Pixcren
             else MyImage.Source = null;
         }
 
-        //画像保存
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private void SaveImage(System.Collections.IList list)
         {
-            SaveImage();
-        }
-        private void SaveImage()
-        {
-            //選択中のアイテムからリスト作成
-            System.Collections.IList saveList = MyListBox.SelectedItems;
-            if (saveList == null) return;
-
-            foreach (PreviewItem item in saveList)
+            foreach (PreviewItem item in list)
             {
-                try
-                {
-                    MyMainWindow.SaveBitmap(item.Image, item.SavePath);
-                    item.IsSavedDone = true;
-                    UpdateStatusText($"{item.SavePath}に保存した");
-                }
-                catch (Exception ex)
-                {
-                    UpdateStatusText($"{item.SavePath}の保存に失敗した");
-                    MessageBox.Show($"セーブできなかった\n{ex}");
-                    break;
-                }
+                SaveImage(item);
+            }
+        }
+
+        private void SaveImage(PreviewItem item)
+        {
+            if (item.IsSavedDone == true) return;
+            try
+            {
+                MyMainWindow.SaveBitmap(item.Image, item.SavePath);
+                item.IsSavedDone = true;
+                UpdateStatusText($"{item.SavePath}に保存した");
+            }
+            catch (Exception ex)
+            {
+                UpdateStatusText($"{item.SavePath}の保存に失敗した");
+                MessageBox.Show($"セーブできなかった\n{ex}");
             }
         }
 
@@ -282,11 +276,6 @@ namespace Pixcren
 
 
 
-        //Item削除
-        private void MyMenuItemRemove_Click(object sender, RoutedEventArgs e)
-        {
-            RemoveItem();
-        }
 
         private void MyListBox_MouseWheel(object sender, MouseWheelEventArgs e)
         {
@@ -306,6 +295,84 @@ namespace Pixcren
             }
             MyListBox.ScrollIntoView(MyListBox.Items[MyListBox.SelectedIndex]);
         }
+
+
+        #region メニュークリック
+
+        //クリップボードに画像コピー
+        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            CopyImage();
+        }
+
+        //画像保存
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            //選択アイテムが1つのときと複数では処理を変える
+            //1つなら押されたボタンと関係のあるアイテムが対象
+            //1つのときは押されたボタンと関連するアイテムと、選択アイテムが別の場合がある
+            //複数なら選択されているアイテムが対象
+
+
+            //選択中のアイテムからリスト作成
+            System.Collections.IList saveList = MyListBox.SelectedItems;
+            if (saveList == null) return;
+            else if (saveList.Count == 1)
+            {
+                Button b = sender as Button;
+                SaveImage((PreviewItem)b?.DataContext);
+            }
+            else
+            {
+                SaveImage(saveList);
+            }
+        }
+
+        //Item削除
+        private void MyMenuItemRemove_Click(object sender, RoutedEventArgs e)
+        {
+            RemoveItem();
+        }
+
+        #endregion メニュークリック
+
+
+        #region 右クリックメニュー
+        private void MyContextItemCopy_Click(object sender, RoutedEventArgs e)
+        {
+            CopyImage();
+        }
+
+        private void MyContextItemDelete_Click(object sender, RoutedEventArgs e)
+        {
+            RemoveItem();
+        }
+
+        private void MyContextItemSelectAll_Click(object sender, RoutedEventArgs e)
+        {
+            MyListBox.SelectAll();
+        }
+
+        private void MyContextItemSaveImage_Click(object sender, RoutedEventArgs e)
+        {
+            SaveImage(MyListBox.SelectedItems);
+        }
+
+        //画像の右クリックメニューの保存項目をアイテム保存状態に合わせて変更
+        private void MyImageContextMenu_Loaded(object sender, RoutedEventArgs e)
+        {
+            var data = MyListBox.SelectedItem as PreviewItem;
+            if (data?.IsSavedDone == true)
+            {
+                //非表示
+                MyImageContextMenuSave.Visibility = Visibility.Collapsed;
+            }
+            else MyImageContextMenuSave.Visibility = Visibility.Visible;
+        }
+
+
+        #endregion 右クリックメニュー
+
 
     }
 
@@ -336,4 +403,5 @@ namespace Pixcren
             throw new NotImplementedException();
         }
     }
+
 }

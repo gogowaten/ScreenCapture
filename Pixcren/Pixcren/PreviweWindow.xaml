@@ -41,10 +41,35 @@
             </DockPanel>
           </DataTemplate>
         </ListBox.ItemTemplate>
+
+        <ListBox.ContextMenu>
+          <ContextMenu>
+            <MenuItem Header="コピー" InputGestureText="Ctrl+C" Name="MyContextItemCopy" Click="MyContextItemCopy_Click"/>
+            <MenuItem Header="全アイテム選択" InputGestureText="Ctrl+A" Name="MyContextItemSelectAll" Click="MyContextItemSelectAll_Click"/>
+            <Menu>
+              <Separator/>
+            </Menu>
+            <MenuItem Header="リストから削除" InputGestureText="Delete" Name="MyContextItemDelete" Click="MyContextItemDelete_Click"/>
+          </ContextMenu>
+        </ListBox.ContextMenu>
       </ListBox>
-      
+
       <ScrollViewer x:Name="MyScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-        <Image x:Name="MyImage" Stretch="None" Source="{Binding Path=Image}"/>
+        <Image x:Name="MyImage" Stretch="None" Source="{Binding Path=Image}">
+          <Image.ContextMenu>
+            <ContextMenu Name="MyImageContextMenu"
+                         Loaded="MyImageContextMenu_Loaded">
+              <MenuItem Header="コピー" InputGestureText="Ctrl+C" Click="MyContextItemCopy_Click"/>
+              <MenuItem Header="保存" InputGestureText="Ctrl+S" Click="MyContextItemSaveImage_Click"
+                        Name="MyImageContextMenuSave"/>
+              <Menu>
+                <Separator/>
+              </Menu>
+              <MenuItem Header="リストから削除" InputGestureText="Delete" Click="MyContextItemDelete_Click"/>
+            </ContextMenu>
+
+          </Image.ContextMenu>
+        </Image>
       </ScrollViewer>
 
 
