@@ -116,6 +116,8 @@ namespace Pixcren
         private void PreviweWindow_Closed(object sender, EventArgs e)
         {
             MyMainWindow.MyPreviweWindow = null;
+            //メモリの解放
+            MyGCCollect();
         }
 
         //クリップボードに画像コピー    
@@ -245,7 +247,7 @@ namespace Pixcren
                 }
 
                 //削除
-                int removeCount = removeList.Count;//削除数、削除する前にここで記録
+                int removeCount = removeList.Count;//削除数、削除する前にここで個数記録
                 foreach (var item in temp)
                 {
                     MyMainWindow.MyPreviewItems.Remove(item);
@@ -264,9 +266,18 @@ namespace Pixcren
 
                 MyListBox.SelectedIndex = selectId;
 
+                //メモリの解放
+                MyGCCollect();
+                
             }
         }
-
+        //メモリの解放、これをしないとプレビューウィンドウを開き直してキャプチャするまで残り続ける
+        private void MyGCCollect()
+        {            
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+        }
 
         //ステータスバーに表示している文字列を更新
         private void UpdateStatusText(string message)

@@ -1684,6 +1684,7 @@ namespace Pixcren
             _ = ReleaseDC(IntPtr.Zero, memDC);
 
             //画像
+            //source.Freeze();
             return source;
 
 
@@ -2085,6 +2086,7 @@ namespace Pixcren
                 96, 96, PixelFormats.Pbgra32);
 
             bmp.Render(dv);
+            //bmp.Freeze();
             return bmp;
         }
 
