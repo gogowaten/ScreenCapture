@@ -765,7 +765,8 @@ namespace Pixcren
                 //クリップボードにコピー、BMPとPNG形式の両方
                 //BMPはアルファ値が255になってしまう、PNGはアルファ値保持するけど、貼り付けはアプリの対応が必要
                 bool isSavedDone = false;
-                if (MyCheckBoxIsOutputToClipboardOnly.IsChecked == true)
+                //if (MyCheckBoxIsOutputToClipboardOnly.IsChecked == true)
+                if (MyAppConfig.IsOutputToClipboardOnly == true)
                 {
                     try
                     {
