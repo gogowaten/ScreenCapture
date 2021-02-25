@@ -30,6 +30,8 @@ namespace Pixcren
             MyMainWindow = main;
             //MyPreviewItems = items;
 
+            //書式設定、なぜかXAMLの方では設定が無視されてしまう
+            MyStatusBarItemImageCount.ContentStringFormat = "Item数 = 0";
 
             Closed += PreviweWindow_Closed;
             this.Loaded += PreviweWindow_Loaded;
@@ -268,12 +270,12 @@ namespace Pixcren
 
                 //メモリの解放
                 MyGCCollect();
-                
+
             }
         }
         //メモリの解放、これをしないとプレビューウィンドウを開き直してキャプチャするまで残り続ける
         private void MyGCCollect()
-        {            
+        {
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();

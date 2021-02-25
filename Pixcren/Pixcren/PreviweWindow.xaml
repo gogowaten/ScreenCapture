@@ -14,10 +14,13 @@
     <DockPanel x:Name="MyDockPanel">
 
       <StatusBar DockPanel.Dock="Bottom">
-        <StatusBarItem>
-          <TextBlock Text="status"/>
-        </StatusBarItem>
+        <StatusBarItem x:Name="MyStatusBarItemImageCount" Content="{Binding Path=Count}"/>
+        <TextBlock Text=""/>
+        
+        <Separator/>
+        
         <StatusBarItem x:Name="MyStatusBarItem" Content="text"/>
+        
       </StatusBar>
 
 
