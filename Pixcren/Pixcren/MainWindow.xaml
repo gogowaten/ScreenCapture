@@ -48,7 +48,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
       <StackPanel>
         <Menu>
-          <Button Content="テストーーーーーーーーーーーー" Name="MyTestButton" Click="MyTestButton_Click"/>
+          <!--<Button Content="テストーーーーーーーーーーーー" Name="MyTestButton" Click="MyTestButton_Click"/>-->
           <!--<Button x:Name="MyButtonSaveState" Content="設定保存" Click="MyButtonSaveState_Click"/>-->
           <Button x:Name="MyButtonLoadState" Content="設定読み込み" Click="MyButtonLoadState_Click"/>
           <Button x:Name="MyButtonSaveStateFile" Content="名前をつけて設定保存" Click="MyButtonSaveStateFile_Click"/>

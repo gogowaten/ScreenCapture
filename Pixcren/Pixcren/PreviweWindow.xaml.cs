@@ -117,6 +117,7 @@ namespace Pixcren
 
         private void PreviweWindow_Closed(object sender, EventArgs e)
         {
+            MyMainWindow.MyPreviewItems.Clear();
             MyMainWindow.MyPreviweWindow = null;
             //メモリの解放
             MyGCCollect();
