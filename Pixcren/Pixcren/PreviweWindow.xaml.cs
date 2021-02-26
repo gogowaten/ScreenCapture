@@ -114,7 +114,7 @@ namespace Pixcren
             this.VisualBitmapScalingMode = BitmapScalingMode.Fant;
         }
 
-
+        //ウィンドウ閉じたとき
         private void PreviweWindow_Closed(object sender, EventArgs e)
         {
             MyMainWindow.MyPreviewItems.Clear();
