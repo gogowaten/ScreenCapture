@@ -938,6 +938,10 @@ namespace Pixcren
                 List<MyWidndowInfo> next = GetWindowInfos(
                     GetCmdWindows(cursor.hWnd, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT));
 
+                //Popup
+                MyWidndowInfo popup = GetWindowInfo(
+                    GetWindow(fore.hWnd, GETWINDOW_CMD.GW_ENABLEDPOPUP));
+
                 R = SelectRects(prev).Union(SelectRects(next)).ToList();
 
                 //重なり判定はForegroundのRectと、それ以外のRectを結合したRectで判定する
@@ -956,12 +960,41 @@ namespace Pixcren
                     R = new();
                 }
 
+                //関連ウィンドウを収集、追加
                 if (isRelatedParent)
                 {
-                    //関連ウィンドウを収集、追加
+                    //foreのオーナーをさかのぼって収集
                     R.AddRange(
                         GetOwnerWindowsInfo(fore.hWnd, LOOP_LIMIT)
                         .Select(x => GetWindowRectMitame(x.hWnd)));
+
+                    //Popupウィンドウの関連ウィンドウ
+                    List<MyWidndowInfo> popupの下層群 = GetWindowInfos(GetCmdWindows(popup.hWnd, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT));
+                    //オーナーがforeと同じなら関連とみなして追加
+                    foreach (var item in popupの下層群)
+                    {
+                        var info = GetWindowInfo(GetWindow(item.hWnd, GETWINDOW_CMD.GW_OWNER));
+                        if (info.hWnd == fore.hWnd)
+                        {
+                            R.Add(GetWindowRectMitame(item.hWnd));
+                        }
+                    }
+                    //foreと最上位オーナーが違う場合は、foreはサブウィンドウ
+                    //このときはforeの下層ウィンドウ(サブウィンドウ群になる)を収集
+                    var topOwner = GetTopOwnerWindowInfo(fore.hWnd);//最上位オーナーを取得
+                    if (topOwner.hWnd != IntPtr.Zero && fore.hWnd != topOwner.hWnd)
+                    {
+                        var subWindows = GetWindowInfos(GetCmdWindows(fore.hWnd, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT));
+                        foreach (var item in subWindows)
+                        {
+                            var info = GetWindowInfo(GetWindow(item.hWnd, GETWINDOW_CMD.GW_OWNER));
+                            if (info.hWnd == topOwner.hWnd)
+                            {
+                                R.Add(GetWindowRectMitame(item.hWnd));
+                            }
+                        }
+                    }
+
                 }
                 else
                 {
@@ -970,21 +1003,33 @@ namespace Pixcren
                 }
 
                 //PopupのRectを追加
-                MyWidndowInfo popup = GetWindowInfo(
-                    GetWindow(fore.hWnd, GETWINDOW_CMD.GW_ENABLEDPOPUP));
-
                 if (popup.Rect.Width != 0) R.Add(GetWindowRectMitame(popup.hWnd));
 
-                var cParent = GetWindowInfo(GetParent(cursor.hWnd));
-                var cOwner = GetWindowInfo(GetWindow(cursor.hWnd, GETWINDOW_CMD.GW_OWNER));
-                var cRoot = GetWindowInfo(GetAncestor(cursor.hWnd, AncestorType.GA_ROOTOWNER));
-                var act = GetWindowInfo(GetActiveWindow());
-
-
-                //ForegroundのウィンドウRectだけでいい
             }
             return R;
         }
+
+        //最上位オーナーを取得
+        private MyWidndowInfo GetTopOwnerWindowInfo(IntPtr hWnd, int countLimit = 10)
+        {
+            MyWidndowInfo info = new();
+            IntPtr temp = hWnd;
+            for (int i = 0; i < countLimit; i++)
+            {
+                var neko = GetWindowInfo(GetWindow(temp, GETWINDOW_CMD.GW_OWNER));
+                if (neko.IsVisible == false || neko.Rect.Width == 0)
+                {
+                    break;
+                }
+                else
+                {
+                    info = neko;
+                    temp = info.hWnd;
+                }
+            }
+            return info;
+        }
+
         /// <summary>
         /// 基準になる最初のウィンドウを指定してOwnerをさかのぼって情報収集
         /// </summary>
@@ -1011,99 +1056,6 @@ namespace Pixcren
 
 
 
-        /// <summary>
-        /// 最前面ウィンドウと、そのメニューや右クリックメニューウィンドウ群のRectリストを作成
-        /// </summary>
-        /// <returns></returns>
-        //private List<Rect> MakeForeWindowWithMenuWindowRectList()
-        //{
-        //    List<Rect> result = new();
-        //    //最前面アプリのウィンドウハンドル取得
-        //    IntPtr fore = GetParentWindowFromForegroundWindow();// GetForegroundWindow();
-        //    //var infoFore = GetWindowRectAndText(fore);//確認用
-        //    //ForegroundのPopupハンドルとRect取得
-        //    IntPtr popup = GetWindow(fore, GETWINDOW_CMD.GW_ENABLEDPOPUP);
-        //    Rect popupRect = MyGetWindowRect(popup);
-        //    var infoPop = GetWindowRectAndText(popup);//確認用
-
-        //    //Popupが存在する(Rectが0じゃない)場合
-        //    if (popupRect != new Rect(0, 0, 0, 0))
-        //    {
-        //        //メニューウィンドウがなくても、なぜかENABLEDPOPUPが取得できるアプリがある
-        //        //そのRectはアプリのウィンドウRectと同じ数値なので、それで判別できる
-        //        //座標が違う場合だけNEXTで収集
-        //        var foreRect = MyGetWindowRect(fore);
-        //        if (popupRect.X == foreRect.X || popupRect.Y == foreRect.Y)
-        //        {
-        //            //GetForegroundwindowの見た目通りのRectを追加
-        //            result.Add(GetWindowRectMitame(fore));
-        //        }
-        //        else
-        //        {
-        //            //PopupのNEXT(下にあるウィンドウハンドル)を収集
-        //            List<IntPtr> pops = GetCmdWindows(popup, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT);
-        //            var infoPops = GetWindowRectAndTexts(pops);//確認用               
-
-        //            //必要なRectだけを選別
-        //            result = SelectRects(pops, fore);
-        //            ////Textを持つウィンドウ以降を除去
-        //            ////残ったウィンドウのRect取得
-        //            ////ドロップシャドウウィンドウのRectを除去
-        //            ////前後のRectが重なっているところまで選択して、以降は除外
-
-        //            //GetForegroundwindowの見た目通りのRectを追加
-        //            result.Add(GetWindowRectMitame(fore));
-        //        }
-
-        //    }
-        //    //Popupが存在しない(Rectが0)場合
-        //    else
-        //    {
-        //        //GetForegroundwindowの見た目通りのRectを追加
-        //        Rect foreRect = GetWindowRectMitame(fore);
-        //        result.Add(foreRect);
-
-        //        //マウスカーソル下のウィンドウハンドル取得、これを基準にする
-        //        GetCursorPos(out POINT cursorP);
-        //        IntPtr cursor = WindowFromPoint(cursorP);
-        //        //Rect cursorRect = GetWindowRectMitame(cursor);
-
-        //        //カーソル下のウィンドウRectとForegroundのRect重なり判定
-        //        //関係あるウィンドウなら、Textがない and Rectが重なっている
-        //        //重なりはメニューウィンドウ全域と重なっていればおk判定にする
-        //        List<Rect> rs = new();
-        //        if (MyGetWindowText(cursor) == "")
-        //        {
-        //            //基準の上下それぞれのウィンドウハンドル取得
-        //            List<IntPtr> prev = GetCmdWindows(cursor, GETWINDOW_CMD.GW_HWNDPREV, LOOP_LIMIT);//上
-        //            List<IntPtr> next = GetCmdWindows(cursor, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT);//下
-        //            //必要なRectだけを選別
-        //            List<Rect> rsPrev = SelectRects(prev, fore);
-        //            List<Rect> rsNext = SelectRects(next, fore);
-        //            //前後のRectリストを統合
-        //            rs = rsPrev.Union(rsNext).ToList();
-        //        }
-
-        //        //重なり判定はForegroundのRectと、それ以外のRectを結合したRectで判定する
-        //        //Rectの結合はGeometryGroupを使う
-        //        GeometryGroup gg = new();
-        //        for (int i = 0; i < rs.Count; i++)
-        //        {
-        //            gg.Children.Add(new RectangleGeometry(rs[i]));
-        //        }
-        //        //重なり判定、重なっていたらForegroundのRect＋それ以外のRect
-        //        if (IsOverlapping(gg, new RectangleGeometry(foreRect)))
-        //        {
-        //            result = result.Union(rs).ToList();
-        //        }
-        //        //重なっていない場合はメニューウィンドウは開かれていないと判定して
-        //        //ForegroundのウィンドウRectだけでいい
-        //    }
-        //    return result;
-        //}
-
-
-
         #region 通常アプリ系のRect取得
         private List<Rect> SelectRects(List<MyWidndowInfo> pList)
         {
@@ -1123,67 +1075,6 @@ namespace Pixcren
             //前後のRectが重なっているところまで選択して、以降は除外
             return SelectOverlappedRect(rs);
         }
-
-
-        ///// <summary>
-        ///// 前後のRectの重なりを判定、重なっていればリストに追加して返す。重なっていないRectが出た時点で終了
-        ///// </summary>
-        ///// <param name="rList"></param>
-        ///// <returns></returns>
-        //private List<Rect> SelectOverlappedRect(List<Rect> rList)
-        //{
-        //    List<Rect> result = new();
-        //    if (rList.Count == 0) return result;
-
-        //    result.Add(rList[0]);
-
-        //    //順番に判定
-        //    for (int i = 1; i < rList.Count; i++)
-        //    {
-        //        if (IsOverlapping(rList[i - 1], rList[i]))
-        //        {
-        //            //重なっていればリストに追加
-        //            result.Add(rList[i]);
-        //        }
-        //        else
-        //        {
-        //            //途切れたら終了
-        //            return result;
-        //        }
-        //    }
-        //    return result;
-        //}
-        ///// <summary>
-        ///// 2つのGeometryが一部でも重なっていたらTrueを返す
-        ///// </summary>
-        ///// <param name="g1"></param>
-        ///// <param name="g2"></param>
-        ///// <returns></returns>
-        //private bool IsOverlapping(Geometry g1, Geometry g2)
-        //{
-
-        //    IntersectionDetail detail = g1.FillContainsWithDetail(g2);
-        //    return detail != IntersectionDetail.Empty;
-        //    //return (detail != IntersectionDetail.Empty || detail != IntersectionDetail.NotCalculated, detail);
-        //}
-        ///// <summary>
-        ///// 2つのRectが一部でも重なっていたらtrueを返す
-        ///// </summary>
-        ///// <param name="r1"></param>
-        ///// <param name="r2"></param>
-        ///// <returns></returns>        
-        //private bool IsOverlapping(Rect r1, Rect r2)
-        //{
-        //    return IsOverlapping(new RectangleGeometry(r1), new RectangleGeometry(r2));
-        //}
-        ////IntersectionDetail列挙型
-        ////Empty             全く重なっていない
-        ////FullyContains     r2はr1の領域に完全に収まっている
-        ////FullyInside       r1はr2の領域に完全に収まっている
-        ////Intersects        一部が重なっている
-        ////NotCalculated     計算されません(よくわからん)
-
-
 
 
         /// <summary>
