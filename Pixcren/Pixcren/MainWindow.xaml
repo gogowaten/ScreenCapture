@@ -6,9 +6,12 @@
         xmlns:local="clr-namespace:Pixcren"
         xmlns:myCtrl="clr-namespace:ControlLibraryCore20200620;assembly=ControlLibraryCore20200620"
         mc:Ignorable="d"
-        Title="MainWindow" Height="640" Width="540" ResizeMode="CanResizeWithGrip"
+        Title="MainWindow" Height="660" Width="540" ResizeMode="CanResizeWithGrip"
         Top="{Binding Path=Top, Mode=TwoWay}" Left="{Binding Path=Left, Mode=TwoWay}">
-  <Window.Resources>
+  <Window.DataContext>
+    <local:AppConfig/>
+  </Window.DataContext>
+  <Window.Resources>    
     <local:StringFormatDigitConverter x:Key="MyStringFormatDigitConverter"/>
     <Style TargetType="CheckBox">
       <Setter Property="VerticalAlignment" Value="Center"/>
@@ -62,12 +65,19 @@
                         SelectedValue="{Binding Path=RectType}"/>
         </DockPanel>
 
-        <CheckBox x:Name="MyCheckBoxIsDrawCursor" Content="マウスカーソルを描画する"
+        <!--<CheckBox x:Name="MyCheckBoxIsDrawCursor" Content="マウスカーソルを描画する"
                   IsChecked="{Binding Path=IsDrawCursor}" HorizontalAlignment="Left" Margin="10,5"/>
-        <CheckBox Content="クリップボードにコピーだけする (保存はしない)"
+        <CheckBox x:Name="MyCheckBoxIsOutputClipboard" Content="クリップボードにコピーだけする (保存はしない)"
                   IsChecked="{Binding Path=IsOutputToClipboardOnly}" HorizontalAlignment="Left" Margin="10,5"/>
-
-
+        <CheckBox Content="クリップボード変更を監視して画像ならキャプチャ" HorizontalAlignment="Left" Margin="10,5"
+                  IsChecked="{Binding Path=IsClipboardCaputure}"
+                  IsEnabled="{Binding ElementName=MyCheckBoxIsOutputClipboard}"/>-->
+        <DockPanel>
+          <TextBlock Text="キャプチャ時の挙動"/>
+          <ComboBox Name="MyComboBoxSaveBehavior" DisplayMemberPath="Value" SelectedValuePath="Key"
+                    SelectedValue="{Binding Path=SaveBehaviorType}"
+                    SelectionChanged="MyComboBoxSaveBehavior_SelectionChanged"/>
+        </DockPanel>
         <!--<GroupBox Header="出力、保存" BorderBrush="YellowGreen">
         <StackPanel>
           <StackPanel>

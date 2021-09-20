@@ -446,14 +446,15 @@ namespace Pixcren
         internal PreviweWindow MyPreviweWindow;
         internal ObservableCollection<PreviewItem> MyPreviewItems;
 
+        //クリップボード監視
+        ClipboardWatcher clipboardWatcher = null;
+
 
         public MainWindow()
         {
             InitializeComponent();
             this.Loaded += MainWindow_Loaded;
             this.Closed += MainWindow_Closed;
-            MyInitializeHotKey();
-            MyInisializeComboBox();
 
 
             //var now = DateTime.Now;
@@ -508,15 +509,15 @@ namespace Pixcren
             }
             this.DataContext = MyAppConfig;
 
+            ////ホットキー初期化と登録
+            //MyInitializeHotKey();
+            //ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1);
 
-            //ホットキー登録
-            ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1);
-
-            //
-            if (MyAppConfig.DirList.Count == 0)
-            {
-                MyComboBoxSaveDirectory.Text = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            }
+            ////
+            //if (MyAppConfig.DirList.Count == 0)
+            //{
+            //    MyComboBoxSaveDirectory.Text = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            //}
 
 
             //実行ファイルのバージョン取得
@@ -525,7 +526,8 @@ namespace Pixcren
             //タイトルをアプリの名前 + バージョン
             this.Title = APP_NAME + AppVersion;
 
-
+            ////コンボボックス初期化、これは最期
+            //MyInisializeComboBox();
         }
 
 
@@ -616,7 +618,15 @@ namespace Pixcren
                 { MySoundPlay.PlayDefault, "既定の音" },
                 { MySoundPlay.PlayOrder, "指定した音" }
             };
+
+            MyComboBoxSaveBehavior.ItemsSource = new Dictionary<SaveBehaviorType, string> {
+                { SaveBehaviorType.Save, "ファイルとして保存" },
+                { SaveBehaviorType.Copy,"クリップボードにコピー" },
+                { SaveBehaviorType.SaveAndCopy,"保存＋コピー" },
+                { SaveBehaviorType.SaveAtClipboardChange,"クリップボード更新されたら保存" }
+            };
         }
+
 
         #region ホットキー
         private void MyInitializeHotKey()
@@ -625,26 +635,52 @@ namespace Pixcren
             ComponentDispatcher.ThreadPreprocessMessage += ComponentDispatcher_ThreadPreprocessMessage;
         }
 
+        /// <summary>
+        /// 保存ディレクトリ取得、未指定ならマイドキュメントにする。存在しない場合はstring.Emptyを返す
+        /// </summary>
+        /// <returns></returns>
+        private string GetSaveDirectory()
+        {
+            //
+            string directory = MyComboBoxSaveDirectory.Text;
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                directory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            }
+
+            if (System.IO.Directory.Exists(directory) == false)
+            {
+                MessageBox.Show($"指定されている保存場所は存在しないので保存できない", "注意");
+                return string.Empty;
+            }
+            return directory;
+        }
+
+
         //ホットキー動作
         private void ComponentDispatcher_ThreadPreprocessMessage(ref MSG msg, ref bool handled)
         {
             if (msg.message != WM_HOTKEY) return;
             else if (msg.wParam.ToInt32() == HOTKEY_ID1)
             {
-                //保存ディレクトリ取得、未指定ならマイドキュメントにする。存在しない場合はエラー表示
-                string directory = MyComboBoxSaveDirectory.Text;
-                if (string.IsNullOrWhiteSpace(directory))
-                {
-                    directory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                }
+                ////ファイル名取得、無効なファイル名なら中止
+                //string fileName = MakeFileName();
+                //if (CheckFileNameValidated(fileName))
+                //{
+                //    return;
+                //}
 
-                if (System.IO.Directory.Exists(directory) == false)
-                {
-                    MessageBox.Show($"指定されている保存場所は存在しないので保存できない", "注意");
-                    return;
-                }
+                ////保存ディレクトリ取得、存在しない場合は中止
+                //string directory = GetSaveDirectory();
+                //if (directory == string.Empty) return;
+
+                //ファイルのフルパス作成
+                string fullPath = GetSaveFileFullPath();
+                //無効なパスの場合は中止
+                if (fullPath == string.Empty) return;
+
+
                 //キャプチャ処理
-
                 //カーソル座標取得
                 GetCursorPos(out MyCursorPoint);
 
@@ -756,71 +792,134 @@ namespace Pixcren
                 //保存画像作成
                 BitmapSource bitmap = MakeBitmapForSave(screen, myRectList);
 
-                //有効なファイル名なら続行
-                string fileName = MakeFileName();
-                bool isFileNameValidated = CheckFileNameValidated(fileName);
-                string fullPath = MakeFullPath(directory, MakeFileName(), MyAppConfig.ImageType.ToString());
+                //保存
+                SaveBitmap(bitmap, fullPath);
 
 
-                //クリップボードにコピー、BMPとPNG形式の両方
-                //BMPはアルファ値が255になってしまう、PNGはアルファ値保持するけど、貼り付けはアプリの対応が必要
-                bool isSavedDone = false;
-                //if (MyCheckBoxIsOutputToClipboardOnly.IsChecked == true)
-                if (MyAppConfig.IsOutputToClipboardOnly == true)
+                //bool isSavedDone = false;
+                //bool isSuccess = false;
+
+                ////ファイルに保存
+                //if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.Save ||
+                //    MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAndCopy)
+                //{
+                //    bool result = SaveBitmapSub(bitmap, fullPath);
+                //    //連番に加算
+                //    if (MyAppConfig.IsFileNameSerial)
+                //    {
+                //        AddIncrementToSerial();
+                //    }
+
+                //    isSavedDone = result;
+                //    isSuccess = result;
+                //}
+
+                ////クリップボードにコピー、BMPとPNG形式の両方をセットする
+                ////BMPはアルファ値が255になる、PNGはアルファ値保持するけどそれが活かせるかは貼り付けるアプリに依る
+                //if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.Copy ||
+                //    MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAndCopy)
+                //{
+                //    try
+                //    {
+                //        //BMP
+                //        DataObject data = new();
+                //        data.SetData(typeof(BitmapSource), bitmap);
+                //        //PNG
+                //        PngBitmapEncoder enc = new();
+                //        enc.Frames.Add(BitmapFrame.Create(bitmap));
+                //        using var ms = new System.IO.MemoryStream();
+                //        enc.Save(ms);
+                //        data.SetData("PNG", ms);
+
+                //        Clipboard.SetDataObject(data, true);//true必須
+                //        isSuccess = true;
+                //    }
+                //    catch (Exception ex)
+                //    {
+                //        MessageBox.Show($"クリップボードにコピーできなかった\n" +
+                //            $"理由は不明、まれに起こる\n\n" +
+                //            $"エラーメッセージ\n" +
+                //            $"{ex.Message}", "エラー発生");
+                //    }
+                //}
+
+                ////音
+                //if (isSuccess) PlayMySound();
+
+                ////プレビューウィンドウに表示
+                //if (MyPreviweWindow != null && bitmap != null)
+                //{
+                //    MyPreviewItems.Add(new PreviewItem(fileName, bitmap, fullPath, isSavedDone));
+                //    ListBox lb = MyPreviweWindow.MyListBox;
+                //    lb.SelectedIndex = MyPreviewItems.Count - 1;
+                //    lb.ScrollIntoView(lb.SelectedItem);
+                //}
+            }
+        }
+
+        private bool SaveBitmap(BitmapSource bitmap, string fullPath)
+        {
+            bool isSavedDone = false;
+            bool isSuccess = false;
+            //ファイルに保存
+            if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.Save ||
+                    MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAndCopy ||
+                    MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAtClipboardChange)
+            {
+                bool result = SaveBitmapSub(bitmap, fullPath);
+                //保存できたら連番に加算
+                if (result && MyAppConfig.IsFileNameSerial)
                 {
-                    try
-                    {
-                        //BMP
-                        DataObject data = new();
-                        data.SetData(typeof(BitmapSource), bitmap);
-                        //PNG
-                        PngBitmapEncoder enc = new();
-                        enc.Frames.Add(BitmapFrame.Create(bitmap));
-                        using var ms = new System.IO.MemoryStream();
-                        enc.Save(ms);
-                        data.SetData("PNG", ms);
-
-                        Clipboard.SetDataObject(data, true);//true必須
-                        //Clipboard.SetImage(bitmap);
-                        PlayMySound();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"クリップボードにコピーできなかった\n" +
-                            $"理由は不明、まれに起こる\n\n" +
-                            $"エラーメッセージ\n" +
-                            $"{ex.Message}", "エラー発生");
-                    }
+                    AddIncrementToSerial();
                 }
 
-                //ファイルに保存
-                else
-                {
-                    if (isFileNameValidated)
-                    {
-                        SaveBitmap(bitmap, fullPath);
-                        //連番に加算
-                        if (MyAppConfig.IsFileNameSerial) AddIncrementToSerial();
-                        //音
-                        PlayMySound();
-                        isSavedDone = true;
-                    }
-                    else
-                    {
-                        MessageBox.Show("ファイル名に使えない文字が指定されていたので保存できなかった", "エラー発生");
-                    }
+                isSavedDone = result;
+                isSuccess = result;
+            }
 
+            //クリップボードにコピー、BMPとPNG形式の両方をセットする
+            //BMPはアルファ値が255になる、PNGはアルファ値保持するけどそれが活かせるかは貼り付けるアプリに依る
+            if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.Copy ||
+                MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAndCopy)
+            {
+                try
+                {
+                    //BMP
+                    DataObject data = new();
+                    data.SetData(typeof(BitmapSource), bitmap);
+                    //PNG
+                    PngBitmapEncoder enc = new();
+                    enc.Frames.Add(BitmapFrame.Create(bitmap));
+                    using var ms = new System.IO.MemoryStream();
+                    enc.Save(ms);
+                    data.SetData("PNG", ms);
+
+                    Clipboard.SetDataObject(data, true);//true必須
+                    isSuccess = true;
                 }
-
-                //プレビューウィンドウに表示
-                if (isFileNameValidated && MyPreviweWindow != null && bitmap != null)
+                catch (Exception ex)
                 {
-                    MyPreviewItems.Add(new PreviewItem(fileName, bitmap, fullPath, isSavedDone));
-                    ListBox lb = MyPreviweWindow.MyListBox;
-                    lb.SelectedIndex = MyPreviewItems.Count - 1;
-                    lb.ScrollIntoView(lb.SelectedItem);
+                    MessageBox.Show($"クリップボードにコピーできなかった\n" +
+                        $"理由は不明、まれに起こる\n\n" +
+                        $"エラーメッセージ\n" +
+                        $"{ex.Message}", "エラー発生");
                 }
             }
+
+            //音
+            if (isSuccess) PlayMySound();
+
+            //プレビューウィンドウに表示
+            if (MyPreviweWindow != null && bitmap != null)
+            {
+                MyPreviewItems.Add(new PreviewItem(
+                    System.IO.Path.GetFileNameWithoutExtension(fullPath), bitmap, fullPath, isSavedDone));
+                ListBox lb = MyPreviweWindow.MyListBox;
+                lb.SelectedIndex = MyPreviewItems.Count - 1;
+                lb.ScrollIntoView(lb.SelectedItem);
+            }
+
+            return isSuccess;
         }
 
         //Rectの修正、デスクトップ領域外になっているのを調整
@@ -1458,8 +1557,31 @@ namespace Pixcren
         #endregion ホットキー
 
 
+        //アプリ起動直後
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            ////設定ファイルが存在すれば読み込んで適用、なければ初期化して適用
+            //string configPath = AppDir + "\\" + APP_CONFIG_FILE_NAME;
+            //if (System.IO.File.Exists(configPath))
+            //{
+            //    MyAppConfig = LoadConfig(configPath);
+            //}
+
+            //else
+            //{
+            //    MyAppConfig = new AppConfig();
+            //}
+            //this.DataContext = MyAppConfig;
+
+            //ホットキー初期化と登録
+            MyInitializeHotKey();
+            ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1);
+
+            //
+            if (MyAppConfig.DirList.Count == 0)
+            {
+                MyComboBoxSaveDirectory.Text = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            }
 
             //MyComboBoxHotKey.SelectionChanged += (s, e) => { vHotKey = KeyInterop.VirtualKeyFromKey(MyAppConfig.HotKey); };
             MyComboBoxHotKey.SelectionChanged += (s, e) => { ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1); };
@@ -1472,6 +1594,18 @@ namespace Pixcren
 
             //ファイル名の見本の表示更新
             UpdateFileNameSample();
+
+            //クリップボード監視用
+            //アプリのウィンドウハンドルを渡してクリップボード監視クラス作成
+            clipboardWatcher = new ClipboardWatcher(new WindowInteropHelper(this).Handle);
+
+            clipboardWatcher.DrawClipboard += (s, e) =>
+            {
+                SaveBitmapFromClipboard();
+            };
+
+            //コンボボックス初期化、これは最期
+            MyInisializeComboBox();
         }
 
         private void MyCheckModKey_Click(object sender, RoutedEventArgs e)
@@ -2032,7 +2166,7 @@ namespace Pixcren
             return bitmap;
         }
 
-        internal void SaveBitmap(BitmapSource bitmap, string fullPath)
+        internal bool SaveBitmapSub(BitmapSource bitmap, string fullPath)
         {
             //CroppedBitmapで切り抜いた画像でBitmapFrame作成して保存
             BitmapEncoder encoder = GetEncoder();
@@ -2044,25 +2178,45 @@ namespace Pixcren
                 using var fs = new System.IO.FileStream(
                     fullPath, System.IO.FileMode.Create, System.IO.FileAccess.Write);
                 encoder.Save(fs);
+                return true;
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"保存できなかった\n{ex}", "保存できなかった");
+                return false;
             }
         }
 
-        //ファイル名の重複を回避、拡張子の前に"_"を付け足す
-        private string MakeFullPath(string directory, string fileName, string extension)
+        //
+        /// <summary>
+        /// 保存ファイルのフルパスを取得、無効なパスの場合はstring.Emptyを返す
+        /// ファイル名の重複を回避、拡張子の前に"_"を付け足す
+        /// </summary>
+        /// <returns></returns>
+        private string GetSaveFileFullPath()
         {
-            var dir = System.IO.Path.Combine(directory, fileName);
-            extension = "." + extension;
-            var fullPath = dir;
-
-            while (System.IO.File.Exists(fullPath + extension))
+            //ファイル名取得、無効なファイル名なら中止
+            string fileName = MakeFileName();
+            if (CheckFileNameValidated(fileName) == false)
             {
-                fullPath += "_";
+                return string.Empty;
             }
-            return fullPath + extension;
+
+            //保存ディレクトリ取得、存在しない場合は中止
+            string directory = GetSaveDirectory();
+            if (directory == string.Empty)
+            {
+                return string.Empty;
+            }
+
+            string dir = System.IO.Path.Combine(directory, fileName);
+            string extension = "." + MyAppConfig.ImageType.ToString();
+
+            while (System.IO.File.Exists(dir + extension))
+            {
+                dir += "_";
+            }
+            return dir + extension;
         }
 
         //メタデータ作成
@@ -2231,7 +2385,124 @@ namespace Pixcren
 
         #endregion 画像保存
 
+        #region クリップボード監視、画像取得、画像保存
 
+        private bool SaveBitmapFromClipboard()
+        {
+            BitmapSource source = GetImageFromClipboard();
+            if (source == null) return false;
+            string fullPath = GetSaveFileFullPath();
+            if (fullPath == string.Empty) return false;
+            return SaveBitmap(source, fullPath);
+        }
+
+        /// <summary>
+        /// クリップボードから画像を取得する、なかった場合はnullを返す
+        /// </summary>
+        /// <returns>BitmapSource</returns>
+        private BitmapSource GetImageFromClipboard()
+        {
+            BitmapSource source;
+            //エクセル系のデータだった場合はGetImageで取得、このままだとアルファ値が0になっているので
+            //Bgr32に変換することでファルファ値を255にする
+            if (IsExcelCell())
+            {
+                source = new FormatConvertedBitmap(Clipboard.GetImage(), PixelFormats.Bgr32, null, 0);
+            }
+            //エクセル系以外はPNG形式で取得を試みて、得られなければGetImageで取得
+            else
+            {
+                source = GetPngImageFromCripboard();
+                if (source == null)
+                {
+                    source = Clipboard.GetImage();
+                }
+            }
+            if (source == null)
+            {
+                return source;
+            }
+            //アルファ値が異常な画像ならピクセルフォーマットをBgr32に変換(アルファ値を255にする)
+            if (IsExceptionTransparent(source))
+            {
+                source = new FormatConvertedBitmap(source, PixelFormats.Bgr32, null, 0);
+            }
+
+            return source;
+        }
+
+
+
+        /// <summary>
+        /// ファルファ値が0になっているか判定、0(異常な画像)ならTrueを返す
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        private bool IsExceptionTransparent(BitmapSource source)
+        {
+            //全部0なら正常判定、ファルファ0でRGBいずれかが0より大きいのは異常
+            //正常判定：全部0 or alpha>0
+            //異常判定：α0でRGBのどれかが1以上
+            //画像の左上の1ピクセルで判定する
+            Int32Rect rect = new(0, 0, 1, 1);
+            BitmapSource crop;
+            if (source.Format != PixelFormats.Bgra32)
+            {
+                crop = new CroppedBitmap(new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0), rect);
+            }
+            else
+            {
+                crop = new CroppedBitmap(source, new Int32Rect(0, 0, 1, 1));
+            }
+            byte[] pixels = new byte[4];
+            crop.CopyPixels(pixels, 4, 0);
+
+            int rgb = pixels[0] + pixels[1] + pixels[2];
+            if (pixels[3] == 0 && rgb > 0)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+
+        /// <summary>
+        /// クリップボードのPNG形式の画像を取得する、ない場合はnullを返す
+        /// </summary>
+        /// <returns></returns>
+        private static BitmapFrame GetPngImageFromCripboard()
+        {
+            BitmapFrame source = null;
+            //クリップボードにPNG形式のデータがあったら、それを使ってBitmapFrame作成
+            using var stream = (System.IO.MemoryStream)Clipboard.GetData("PNG");
+            if (stream != null)
+            {
+                source = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+            }
+            return source;
+        }
+
+        /// <summary>
+        /// エクセル判定、データの中にEnhancedMetafile形式があればエクセルと判定してtrueを返す
+        /// </summary>
+        /// <returns></returns>
+        private static bool IsExcelCell()
+        {
+            string[] formats = Clipboard.GetDataObject().GetFormats();
+            foreach (var item in formats)
+            {
+                if (item == "EnhancedMetafile")
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        #endregion クリップボード監視、画像取得
 
 
         //コンボボックス上でキーを押し下げたとき
@@ -2428,7 +2699,7 @@ namespace Pixcren
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"再生できなかった\n" +
+                        _ = MessageBox.Show($"再生できなかった\n" +
                             $"頭に無音が続くファイルは再生できないことが多い気がする\n" +
                             $"{ex.Message}", "再生できなかった");
                     }
@@ -2558,6 +2829,25 @@ namespace Pixcren
             }
         }
 
+        //キャプチャ時の挙動変更時
+        private void MyComboBoxSaveBehavior_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            //クリップボード監視のON/OFF
+            SaveBehaviorChanged();
+        }
+        //クリップボード監視のON/OFF
+        private void SaveBehaviorChanged()
+        {
+            if (clipboardWatcher == null) return;
+            if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAtClipboardChange)
+            {
+                clipboardWatcher.Start();
+            }
+            else
+            {
+                clipboardWatcher.Stop();
+            }
+        }
 
         #endregion ボタンクリックとかのイベント
 
@@ -2604,8 +2894,10 @@ namespace Pixcren
         [DataMember] public string Dir { get; set; }
         [DataMember] public int DirIndex { get; set; }
 
+        //チェックボックス
         [DataMember] public bool? IsDrawCursor { get; set; }//マウスカーソル描画の有無
-        [DataMember] public bool IsOutputToClipboardOnly { get; set; }//出力はクリップボードだけ
+        //[DataMember] public bool IsOutputToClipboardOnly { get; set; }//出力はクリップボードだけ
+        //[DataMember] public bool IsClipboardCaputure { get; set; }//クリップボード監視
 
 
         //ホットキー
@@ -2614,6 +2906,7 @@ namespace Pixcren
         [DataMember] public bool HotkeyShift { get; set; }
         [DataMember] public bool HotkeyWin { get; set; }
         [DataMember] public Key HotKey { get; set; }//キャプチャーキー
+
 
         //ファイルネーム        
         //[DataMember] public FileNameBaseType FileNameBaseType { get; set; }
@@ -2644,12 +2937,17 @@ namespace Pixcren
         [DataMember] public string FileNameText4 { get; set; }
         [DataMember] public ObservableCollection<string> FileNameText4List { get; set; } = new();
 
+
         //音
         [DataMember] public bool IsSoundPlay { get; set; }
         //[DataMember] public bool IsSoundDefault { get; set; }
         [DataMember] public ObservableCollection<string> SoundFilePathList { get; set; } = new();
         [DataMember] public string SoundFilePath { get; set; }
         [DataMember] public MySoundPlay MySoundPlay { get; set; }
+
+
+        //保存時の動作
+        [DataMember] public SaveBehaviorType SaveBehaviorType { get; set; }
 
 
 
@@ -2800,6 +3098,13 @@ namespace Pixcren
         PlayOrder
     }
 
+    public enum SaveBehaviorType
+    {
+        Save,
+        Copy,
+        SaveAndCopy,
+        SaveAtClipboardChange
+    }
 
 
 
