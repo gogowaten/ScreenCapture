@@ -194,7 +194,7 @@ namespace Pixcren
             if (item.IsSavedDone == true) return;
             try
             {
-                MyMainWindow.SaveBitmap(item.Image, item.SavePath);
+                MyMainWindow.SaveBitmapSub(item.Image, item.SavePath);
                 item.IsSavedDone = true;
                 UpdateStatusText($"{item.SavePath}に保存した");
             }
