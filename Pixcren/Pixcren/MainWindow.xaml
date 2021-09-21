@@ -50,7 +50,7 @@
   <Grid UseLayoutRounding="True">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
       <StackPanel>
-        <Menu>
+        <Menu Margin="0,0,0,10">
           <!--<Button Content="テストーーーーーーーーーーーー" Name="MyTestButton" Click="MyTestButton_Click"/>-->
           <!--<Button x:Name="MyButtonSaveState" Content="設定保存" Click="MyButtonSaveState_Click"/>-->
           <Button x:Name="MyButtonLoadState" Content="設定読み込み" Click="MyButtonLoadState_Click"/>
@@ -59,15 +59,15 @@
         </Menu>
 
 
+        <CheckBox x:Name="MyCheckBoxIsDrawCursor" Content="マウスカーソルもキャプチャする"
+                  IsChecked="{Binding Path=IsDrawCursor}" HorizontalAlignment="Left" Margin="10,5"/>
         <DockPanel>
           <TextBlock Text="キャプチャ範囲"/>
           <ComboBox Name="MyComboBoxCaputureRect" DisplayMemberPath="Value" SelectedValuePath="Key"
                         SelectedValue="{Binding Path=RectType}"/>
         </DockPanel>
 
-        <!--<CheckBox x:Name="MyCheckBoxIsDrawCursor" Content="マウスカーソルを描画する"
-                  IsChecked="{Binding Path=IsDrawCursor}" HorizontalAlignment="Left" Margin="10,5"/>
-        <CheckBox x:Name="MyCheckBoxIsOutputClipboard" Content="クリップボードにコピーだけする (保存はしない)"
+        <!--<CheckBox x:Name="MyCheckBoxIsOutputClipboard" Content="クリップボードにコピーだけする (保存はしない)"
                   IsChecked="{Binding Path=IsOutputToClipboardOnly}" HorizontalAlignment="Left" Margin="10,5"/>
         <CheckBox Content="クリップボード変更を監視して画像ならキャプチャ" HorizontalAlignment="Left" Margin="10,5"
                   IsChecked="{Binding Path=IsClipboardCaputure}"

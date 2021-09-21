@@ -620,10 +620,10 @@ namespace Pixcren
             };
 
             MyComboBoxSaveBehavior.ItemsSource = new Dictionary<SaveBehaviorType, string> {
-                { SaveBehaviorType.Save, "ファイルとして保存" },
-                { SaveBehaviorType.Copy,"クリップボードにコピー" },
+                { SaveBehaviorType.Save, "保存：画像ファイルとして保存する" },
+                { SaveBehaviorType.Copy,"コピー：クリップボードにコピーする" },
                 { SaveBehaviorType.SaveAndCopy,"保存＋コピー" },
-                { SaveBehaviorType.SaveAtClipboardChange,"クリップボード更新されたら保存" }
+                { SaveBehaviorType.SaveAtClipboardChange,"特殊：クリップボード更新されたら保存" }
             };
         }
 
@@ -663,17 +663,6 @@ namespace Pixcren
             if (msg.message != WM_HOTKEY) return;
             else if (msg.wParam.ToInt32() == HOTKEY_ID1)
             {
-                ////ファイル名取得、無効なファイル名なら中止
-                //string fileName = MakeFileName();
-                //if (CheckFileNameValidated(fileName))
-                //{
-                //    return;
-                //}
-
-                ////保存ディレクトリ取得、存在しない場合は中止
-                //string directory = GetSaveDirectory();
-                //if (directory == string.Empty) return;
-
                 //ファイルのフルパス作成
                 string fullPath = GetSaveFileFullPath();
                 //無効なパスの場合は中止
@@ -793,67 +782,9 @@ namespace Pixcren
                 BitmapSource bitmap = MakeBitmapForSave(screen, myRectList);
 
                 //保存
-                SaveBitmap(bitmap, fullPath);
+                _ = SaveBitmap(bitmap, fullPath);
 
 
-                //bool isSavedDone = false;
-                //bool isSuccess = false;
-
-                ////ファイルに保存
-                //if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.Save ||
-                //    MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAndCopy)
-                //{
-                //    bool result = SaveBitmapSub(bitmap, fullPath);
-                //    //連番に加算
-                //    if (MyAppConfig.IsFileNameSerial)
-                //    {
-                //        AddIncrementToSerial();
-                //    }
-
-                //    isSavedDone = result;
-                //    isSuccess = result;
-                //}
-
-                ////クリップボードにコピー、BMPとPNG形式の両方をセットする
-                ////BMPはアルファ値が255になる、PNGはアルファ値保持するけどそれが活かせるかは貼り付けるアプリに依る
-                //if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.Copy ||
-                //    MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAndCopy)
-                //{
-                //    try
-                //    {
-                //        //BMP
-                //        DataObject data = new();
-                //        data.SetData(typeof(BitmapSource), bitmap);
-                //        //PNG
-                //        PngBitmapEncoder enc = new();
-                //        enc.Frames.Add(BitmapFrame.Create(bitmap));
-                //        using var ms = new System.IO.MemoryStream();
-                //        enc.Save(ms);
-                //        data.SetData("PNG", ms);
-
-                //        Clipboard.SetDataObject(data, true);//true必須
-                //        isSuccess = true;
-                //    }
-                //    catch (Exception ex)
-                //    {
-                //        MessageBox.Show($"クリップボードにコピーできなかった\n" +
-                //            $"理由は不明、まれに起こる\n\n" +
-                //            $"エラーメッセージ\n" +
-                //            $"{ex.Message}", "エラー発生");
-                //    }
-                //}
-
-                ////音
-                //if (isSuccess) PlayMySound();
-
-                ////プレビューウィンドウに表示
-                //if (MyPreviweWindow != null && bitmap != null)
-                //{
-                //    MyPreviewItems.Add(new PreviewItem(fileName, bitmap, fullPath, isSavedDone));
-                //    ListBox lb = MyPreviweWindow.MyListBox;
-                //    lb.SelectedIndex = MyPreviewItems.Count - 1;
-                //    lb.ScrollIntoView(lb.SelectedItem);
-                //}
             }
         }
 
@@ -1598,15 +1529,17 @@ namespace Pixcren
             //クリップボード監視用
             //アプリのウィンドウハンドルを渡してクリップボード監視クラス作成
             clipboardWatcher = new ClipboardWatcher(new WindowInteropHelper(this).Handle);
-
+            //クリップボードの更新イベントで画像を保存
             clipboardWatcher.DrawClipboard += (s, e) =>
             {
                 SaveBitmapFromClipboard();
             };
 
+
             //コンボボックス初期化、これは最期
             MyInisializeComboBox();
         }
+
 
         private void MyCheckModKey_Click(object sender, RoutedEventArgs e)
         {
@@ -2386,6 +2319,11 @@ namespace Pixcren
         #endregion 画像保存
 
         #region クリップボード監視、画像取得、画像保存
+        //       クリップボードの中にある画像をWPFで取得してみた、Clipboard.GetImage() だけだと透明になる - 午後わてんのブログ
+        //https://gogowaten.hatenablog.com/entry/2019/11/12/201852
+
+        //        アルファ値を失わずに画像のコピペできた、.NET WPFのClipboard - 午後わてんのブログ
+        //https://gogowaten.hatenablog.com/entry/2021/02/10/134406
 
         private bool SaveBitmapFromClipboard()
         {
