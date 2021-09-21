@@ -21,7 +21,7 @@ namespace Pixcren
         private const int WM_DRAWCLIPBOARD = 0x031D;
 
         IntPtr handle;
-        HwndSource hwndSource = null;
+        HwndSource hwndSource;
 
         //イベント登録
         public event EventHandler DrawClipboard;
