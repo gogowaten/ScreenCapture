@@ -24,6 +24,7 @@ using System.Runtime.Serialization;
 using System.Xml;
 using System.Collections.ObjectModel;
 using Microsoft.Win32;
+using System.Diagnostics;//クリップボード更新間隔のストップウォッチとか
 
 //スクショアプリできた！右クリックメニューを表示したエクセルもキャプチャできる - 午後わてんのブログ
 //https://gogowaten.hatenablog.com/entry/2020/12/28/165619
@@ -448,6 +449,7 @@ namespace Pixcren
 
         //クリップボード監視
         ClipboardWatcher clipboardWatcher = null;
+        Stopwatch MyStopwatch;
 
 
         public MainWindow()
@@ -683,6 +685,21 @@ namespace Pixcren
                 //画面全体画像取得
                 BitmapSource screen = ScreenCapture();
 
+                //test
+                var fore = GetWindowInfo(GetForegroundWindow());
+                MyWidndowInfo rOwner = GetWindowInfo(
+                    GetAncestor(fore.hWnd, AncestorType.GA_ROOTOWNER));
+                MyWidndowInfo pare = GetWindowInfo(
+                    GetParent(fore.hWnd));
+                MyWidndowInfo ePopup = GetWindowInfo(
+                    GetWindow(rOwner.hWnd, GETWINDOW_CMD.GW_ENABLEDPOPUP));
+                //カーソルしたウィンドウ
+                GetCursorPos(out POINT cp);
+                MyWidndowInfo cursor = GetWindowInfo(WindowFromPoint(cp));
+                //end test
+
+
+
                 //RECT取得
                 //Int32Rect rect;
                 List<Int32Rect> myRectList = new();
@@ -788,71 +805,6 @@ namespace Pixcren
             }
         }
 
-        private bool SaveBitmap(BitmapSource bitmap, string fullPath)
-        {
-            bool isSavedDone = false;
-            bool isSuccess = false;
-            //ファイルに保存
-            if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.Save ||
-                    MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAndCopy ||
-                    MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAtClipboardChange)
-            {
-                bool result = SaveBitmapSub(bitmap, fullPath);
-                //保存できたら連番に加算
-                if (result && MyAppConfig.IsFileNameSerial)
-                {
-                    AddIncrementToSerial();
-                }
-
-                isSavedDone = result;
-                isSuccess = result;
-            }
-
-            //クリップボードにコピー、BMPとPNG形式の両方をセットする
-            //BMPはアルファ値が255になる、PNGはアルファ値保持するけどそれが活かせるかは貼り付けるアプリに依る
-            if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.Copy ||
-                MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAndCopy)
-            {
-                try
-                {
-                    //BMP
-                    DataObject data = new();
-                    data.SetData(typeof(BitmapSource), bitmap);
-                    //PNG
-                    PngBitmapEncoder enc = new();
-                    enc.Frames.Add(BitmapFrame.Create(bitmap));
-                    using var ms = new System.IO.MemoryStream();
-                    enc.Save(ms);
-                    data.SetData("PNG", ms);
-
-                    Clipboard.SetDataObject(data, true);//true必須
-                    isSuccess = true;
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"クリップボードにコピーできなかった\n" +
-                        $"理由は不明、まれに起こる\n\n" +
-                        $"エラーメッセージ\n" +
-                        $"{ex.Message}", "エラー発生");
-                }
-            }
-
-            //音
-            if (isSuccess) PlayMySound();
-
-            //プレビューウィンドウに表示
-            if (MyPreviweWindow != null && bitmap != null)
-            {
-                MyPreviewItems.Add(new PreviewItem(
-                    System.IO.Path.GetFileNameWithoutExtension(fullPath), bitmap, fullPath, isSavedDone));
-                ListBox lb = MyPreviweWindow.MyListBox;
-                lb.SelectedIndex = MyPreviewItems.Count - 1;
-                lb.ScrollIntoView(lb.SelectedItem);
-            }
-
-            return isSuccess;
-        }
-
         //Rectの修正、デスクトップ領域外になっているのを調整
         private List<Int32Rect> FixInt32Rects(List<Int32Rect> rList, int w, int h)
         {
@@ -897,18 +849,31 @@ namespace Pixcren
         }
 
         #region メニューウィンドウのRect収集
+        //かなり混沌としたコードになっている、手に負えない
 
         private List<Rect> GetRectListForeWindowWhitMenu(bool isRelatedParent)
         {
             List<Rect> R = new();
 
             var fore = GetWindowInfo(GetForegroundWindow());
+            //カーソルしたウィンドウ
+            GetCursorPos(out POINT cp);
+            MyWidndowInfo cursorWnd = GetWindowInfo(WindowFromPoint(cp));
+            //rootOwner
+            MyWidndowInfo rootOwner = GetWindowInfo(
+                    GetAncestor(fore.hWnd, AncestorType.GA_ROOTOWNER));
 
-            //textがなければエクセル系アプリと判断、下層から選別
+
+            //foreかカーソルしたのtextが""
+            //if (fore.Text == "" || cursorWnd.Text == "")
+            //fore.textが""か関連ウィンドウ含めるなら
+            //if (fore.Text == "" || isRelatedParent)
+
+            //fore.textが""ならエクセル系アプリと判断            
             if (fore.Text == "")
             {
-                MyWidndowInfo rootOwner = GetWindowInfo(
-                    GetAncestor(fore.hWnd, AncestorType.GA_ROOTOWNER));
+                //下層から選別
+
                 MyWidndowInfo parent = GetWindowInfo(
                     GetParent(fore.hWnd));
                 MyWidndowInfo popup = GetWindowInfo(
@@ -924,6 +889,13 @@ namespace Pixcren
                 //RootOwnerがForeのRootOwnerと同じものだけ残す
                 next = next.Where(x => rootOwner.Text == MyGetWindowText(GetAncestor(x.hWnd, AncestorType.GA_ROOTOWNER))).ToList();
 
+                //カーソルしたにあるウィンドウを追加
+                if (IsOverlapping(new RectangleGeometry(cursorWnd.Rect), new RectangleGeometry(fore.Rect)))
+                {
+                    next.Add(cursorWnd);
+                }
+
+
                 //見た目通りのRectを取得
                 R = next.Select(x => GetWindowRectMitame(x.hWnd)).ToList();
 
@@ -935,6 +907,7 @@ namespace Pixcren
                 {
                     R.Add(GetWindowRectMitame(popup.hWnd));
                 }
+
 
                 //ParentのTextが""ならParentは無いので、代わりにRootOwnerのRectを追加
                 if (parent.Text == "")
@@ -959,14 +932,11 @@ namespace Pixcren
             //普通のアプリは、上下層から選別
             else
             {
-                GetCursorPos(out POINT cp);
-                MyWidndowInfo cursor = GetWindowInfo(WindowFromPoint(cp));
-
                 List<MyWidndowInfo> prev = GetWindowInfos(
-                    GetCmdWindows(cursor.hWnd, GETWINDOW_CMD.GW_HWNDPREV, LOOP_LIMIT));
+                    GetCmdWindows(cursorWnd.hWnd, GETWINDOW_CMD.GW_HWNDPREV, LOOP_LIMIT));
 
                 List<MyWidndowInfo> next = GetWindowInfos(
-                    GetCmdWindows(cursor.hWnd, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT));
+                    GetCmdWindows(cursorWnd.hWnd, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT));
 
                 //Popup
                 MyWidndowInfo popup = GetWindowInfo(
@@ -1009,21 +979,22 @@ namespace Pixcren
                             R.Add(GetWindowRectMitame(item.hWnd));
                         }
                     }
-                    //foreと最上位オーナーが違う場合は、foreはサブウィンドウ
-                    //このときはforeの下層ウィンドウ(サブウィンドウ群になる)を収集
-                    var topOwner = GetTopOwnerWindowInfo(fore.hWnd);//最上位オーナーを取得
-                    if (topOwner.hWnd != IntPtr.Zero && fore.hWnd != topOwner.hWnd)
-                    {
-                        var subWindows = GetWindowInfos(GetCmdWindows(fore.hWnd, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT));
-                        foreach (var item in subWindows)
-                        {
-                            var info = GetWindowInfo(GetWindow(item.hWnd, GETWINDOW_CMD.GW_OWNER));
-                            if (info.hWnd == topOwner.hWnd)
-                            {
-                                R.Add(GetWindowRectMitame(item.hWnd));
-                            }
-                        }
-                    }
+
+                    ////foreと最上位オーナーが違う場合は、foreはサブウィンドウ
+                    ////このときはforeの下層ウィンドウ(サブウィンドウ群になる)を収集
+                    //var topOwner = GetTopOwnerWindowInfo(fore.hWnd);//最上位オーナーを取得
+                    //if (topOwner.hWnd != IntPtr.Zero && fore.hWnd != topOwner.hWnd)
+                    //{
+                    //    var subWindows = GetWindowInfos(GetCmdWindows(fore.hWnd, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT));
+                    //    foreach (var item in subWindows)
+                    //    {
+                    //        var info = GetWindowInfo(GetWindow(item.hWnd, GETWINDOW_CMD.GW_OWNER));
+                    //        if (info.hWnd == topOwner.hWnd)
+                    //        {
+                    //            R.Add(GetWindowRectMitame(item.hWnd));
+                    //        }
+                    //    }
+                    //}
 
                 }
                 else
@@ -1038,6 +1009,7 @@ namespace Pixcren
             }
             return R;
         }
+
 
         //最上位オーナーを取得
         private MyWidndowInfo GetTopOwnerWindowInfo(IntPtr hWnd, int countLimit = 10)
@@ -1491,19 +1463,6 @@ namespace Pixcren
         //アプリ起動直後
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            ////設定ファイルが存在すれば読み込んで適用、なければ初期化して適用
-            //string configPath = AppDir + "\\" + APP_CONFIG_FILE_NAME;
-            //if (System.IO.File.Exists(configPath))
-            //{
-            //    MyAppConfig = LoadConfig(configPath);
-            //}
-
-            //else
-            //{
-            //    MyAppConfig = new AppConfig();
-            //}
-            //this.DataContext = MyAppConfig;
-
             //ホットキー初期化と登録
             MyInitializeHotKey();
             ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1);
@@ -1529,10 +1488,20 @@ namespace Pixcren
             //クリップボード監視用
             //アプリのウィンドウハンドルを渡してクリップボード監視クラス作成
             clipboardWatcher = new ClipboardWatcher(new WindowInteropHelper(this).Handle);
+            MyStopwatch = new Stopwatch();
+            MyStopwatch.Start();
+
             //クリップボードの更新イベントで画像を保存
             clipboardWatcher.DrawClipboard += (s, e) =>
             {
+                if (MyStopwatch.ElapsedMilliseconds < 100)
+                {
+                    MyStopwatch.Restart();
+                    return;
+                }
+
                 SaveBitmapFromClipboard();
+
             };
 
 
@@ -2003,7 +1972,76 @@ namespace Pixcren
         #endregion
 
 
+
+
         #region 画像保存
+
+
+        private bool SaveBitmap(BitmapSource bitmap, string fullPath)
+        {
+            bool isSavedDone = false;
+            bool isSuccess = false;
+            //ファイルに保存
+            if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.Save ||
+                    MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAndCopy ||
+                    MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAtClipboardChange)
+            {
+                bool result = SaveBitmapSub(bitmap, fullPath);
+                //保存できたら連番に加算
+                if (result && MyAppConfig.IsFileNameSerial)
+                {
+                    AddIncrementToSerial();
+                }
+
+                isSavedDone = result;
+                isSuccess = result;
+            }
+
+            //クリップボードにコピー、BMPとPNG形式の両方をセットする
+            //BMPはアルファ値が255になる、PNGはアルファ値保持するけどそれが活かせるかは貼り付けるアプリに依る
+            if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.Copy ||
+                MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAndCopy)
+            {
+                try
+                {
+                    //BMP
+                    DataObject data = new();
+                    data.SetData(typeof(BitmapSource), bitmap);
+                    //PNG
+                    PngBitmapEncoder enc = new();
+                    enc.Frames.Add(BitmapFrame.Create(bitmap));
+                    using var ms = new System.IO.MemoryStream();
+                    enc.Save(ms);
+                    data.SetData("PNG", ms);
+
+                    Clipboard.SetDataObject(data, true);//true必須
+                    isSuccess = true;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"クリップボードにコピーできなかった\n" +
+                        $"理由は不明、まれに起こる\n\n" +
+                        $"エラーメッセージ\n" +
+                        $"{ex.Message}", "エラー発生");
+                }
+            }
+
+            //音
+            if (isSuccess) PlayMySound();
+
+            //プレビューウィンドウに表示
+            if (MyPreviweWindow != null && bitmap != null)
+            {
+                MyPreviewItems.Add(new PreviewItem(
+                    System.IO.Path.GetFileNameWithoutExtension(fullPath), bitmap, fullPath, isSavedDone));
+                ListBox lb = MyPreviweWindow.MyListBox;
+                lb.SelectedIndex = MyPreviewItems.Count - 1;
+                lb.ScrollIntoView(lb.SelectedItem);
+            }
+
+            return isSuccess;
+        }
+
         /// <summary>
         /// 複数Rect範囲を組み合わせた形にbitmapを切り抜く
         /// </summary>
@@ -2327,10 +2365,27 @@ namespace Pixcren
 
         private bool SaveBitmapFromClipboard()
         {
+            //前回の画像取得から一定時間以下のときは処理しない
+            MyStopwatch.Stop();
+            if (MyStopwatch.ElapsedMilliseconds < 100)
+            {
+                return false;
+            }
+
             BitmapSource source = GetImageFromClipboard();
-            if (source == null) return false;
+            if (source == null)
+            {
+                MyStopwatch.Restart();
+                return false;
+            }
+
             string fullPath = GetSaveFileFullPath();
-            if (fullPath == string.Empty) return false;
+            if (fullPath == string.Empty)
+            {
+                MyStopwatch.Restart();
+                return false;
+            }
+            MyStopwatch.Restart();
             return SaveBitmap(source, fullPath);
         }
 
@@ -2340,20 +2395,43 @@ namespace Pixcren
         /// <returns>BitmapSource</returns>
         private BitmapSource GetImageFromClipboard()
         {
-            BitmapSource source;
+
+            BitmapSource source = null;
+            int count = 1;
+            int limit = 5;
+            do
+            {
+                try
+                {
+                    source = Clipboard.GetImage();
+                }
+                catch (Exception)
+                {
+                }
+                finally
+                {
+                    count++;
+                }
+            } while (limit >= count && source == null);
+
+            if (source == null)
+            {
+                return null;
+            }
+
             //エクセル系のデータだった場合はGetImageで取得、このままだとアルファ値が0になっているので
             //Bgr32に変換することでファルファ値を255にする
             if (IsExcelCell())
             {
-                source = new FormatConvertedBitmap(Clipboard.GetImage(), PixelFormats.Bgr32, null, 0);
+                source = new FormatConvertedBitmap(source, PixelFormats.Bgr32, null, 0);
             }
             //エクセル系以外はPNG形式で取得を試みて、得られなければGetImageで取得
             else
             {
-                source = GetPngImageFromCripboard();
-                if (source == null)
+                BitmapSource png = GetPngImageFromCripboard();
+                if (png != null)
                 {
-                    source = Clipboard.GetImage();
+                    source = png;
                 }
             }
             if (source == null)
@@ -2365,6 +2443,7 @@ namespace Pixcren
             {
                 source = new FormatConvertedBitmap(source, PixelFormats.Bgr32, null, 0);
             }
+
 
             return source;
         }
@@ -2414,12 +2493,21 @@ namespace Pixcren
         private static BitmapFrame GetPngImageFromCripboard()
         {
             BitmapFrame source = null;
-            //クリップボードにPNG形式のデータがあったら、それを使ってBitmapFrame作成
-            using var stream = (System.IO.MemoryStream)Clipboard.GetData("PNG");
-            if (stream != null)
+            //クリップボードにPNG形式のデータがあったら、それを使ってBitmapFrame作成            
+            try
             {
-                source = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                using (System.IO.MemoryStream stream = (System.IO.MemoryStream)Clipboard.GetData("PNG"))
+                {
+                    if (stream != null)
+                    {
+                        source = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                    }
+                }
             }
+            catch (Exception ex)
+            {
+            }
+
             return source;
         }
 
@@ -2429,7 +2517,38 @@ namespace Pixcren
         /// <returns></returns>
         private static bool IsExcelCell()
         {
-            string[] formats = Clipboard.GetDataObject().GetFormats();
+
+            IDataObject obj = null;
+            int count = 1;
+            int limit = 5;
+            do
+            {
+                try
+                {
+                    obj = Clipboard.GetDataObject();
+                }
+                catch (Exception ex)
+                {
+                    //if (count == limit)
+                    //{
+                    //    string str = $"{ex.Message}\n" + $"{limit}回試行したけど" + $"クリップボードのデータの取得に失敗\n";
+                    //    MessageBox.Show(str);
+                    //}
+                }
+                finally
+                {
+                    count++;
+                    Task.Delay(10);
+                }
+
+            } while (obj == null && limit >= count);
+
+            if (obj == null)
+            {
+                return false;
+            }
+
+            string[] formats = obj.GetFormats();
             foreach (var item in formats)
             {
                 if (item == "EnhancedMetafile")
