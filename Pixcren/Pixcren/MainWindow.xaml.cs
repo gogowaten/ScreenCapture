@@ -413,13 +413,6 @@ namespace Pixcren
         private bool IsMaskUse;//マスク画像使用の有無判定用
 
 
-        //各Rect
-        //private List<MyRectInfo> MyRects;
-        //private Dictionary<CaptureRectType, MyRectRect> MyRectRects;
-        //private Dictionary<CaptureRectType, string> MyDCRectName;
-        //private Dictionary<CaptureRectType, Int32Rect> MyDictRectRect;
-
-
         //アプリ情報
         private const string APP_NAME = "Pixcren";
         private string AppVersion;
@@ -509,18 +502,8 @@ namespace Pixcren
             {
                 MyAppConfig = new AppConfig();
             }
+            MyAppConfig = FixAppWindowLocate(MyAppConfig);//ウィンドウ位置画面外チェック
             this.DataContext = MyAppConfig;
-
-            ////ホットキー初期化と登録
-            //MyInitializeHotKey();
-            //ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1);
-
-            ////
-            //if (MyAppConfig.DirList.Count == 0)
-            //{
-            //    MyComboBoxSaveDirectory.Text = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            //}
-
 
             //実行ファイルのバージョン取得
             var cl = Environment.GetCommandLineArgs();
@@ -532,7 +515,26 @@ namespace Pixcren
             //MyInisializeComboBox();
         }
 
+        /// <summary>
+        /// アプリの設定のウィンドウ位置が画面外だった場合は0に変更して返す
+        /// </summary>
+        /// <param name="config"></param>
+        /// <returns></returns>
+        private AppConfig FixAppWindowLocate(AppConfig config)
+        {
+            if (config.Left < -10 ||
+                config.Left > SystemParameters.VirtualScreenWidth - 100)
+            {
+                config.Left = 0;
+            }
+            if (config.Top < -10 ||
+                config.Top > SystemParameters.VirtualScreenHeight - 100)
+            {
+                config.Top = 0;
+            }
 
+            return config;
+        }
 
 
         private void MyComboBoxFileNameText_PreviewKeyUp(object sender, KeyEventArgs e)
@@ -623,9 +625,10 @@ namespace Pixcren
 
             MyComboBoxSaveBehavior.ItemsSource = new Dictionary<SaveBehaviorType, string> {
                 { SaveBehaviorType.Save, "保存：画像ファイルとして保存する" },
-                { SaveBehaviorType.Copy,"コピー：クリップボードにコピーする" },
-                { SaveBehaviorType.SaveAndCopy,"保存＋コピー" },
-                { SaveBehaviorType.SaveAtClipboardChange,"特殊：クリップボード更新されたら保存" }
+                { SaveBehaviorType.Copy, "コピー：クリップボードにコピーする" },
+                { SaveBehaviorType.SaveAndCopy, "保存＋コピー" },
+                { SaveBehaviorType.SaveAtClipboardChange, "特殊：クリップボード更新されたら保存" },
+                { SaveBehaviorType.AddPreviewWindow, "特殊：クリップボード更新されたらプレビューウィンドウに追加" }
             };
         }
 
@@ -1494,13 +1497,17 @@ namespace Pixcren
             //クリップボードの更新イベントで画像を保存
             clipboardWatcher.DrawClipboard += (s, e) =>
             {
+                MyStopwatch.Stop();
                 if (MyStopwatch.ElapsedMilliseconds < 100)
                 {
                     MyStopwatch.Restart();
                     return;
                 }
 
+                //処理
+                MyStopwatch.Restart();
                 SaveBitmapFromClipboard();
+
 
             };
 
@@ -1805,7 +1812,15 @@ namespace Pixcren
             if (dialog.ShowDialog() == true)
             {
                 var config = LoadConfig(dialog.FileName);
-                if (config == null) return;
+                if (config == null)
+                {
+                    return;
+                }
+
+                //ウィンドウ位置は変更しない
+                config.Left = MyAppConfig.Left;
+                config.Top = MyAppConfig.Top;
+
                 MyAppConfig = config;
                 this.DataContext = MyAppConfig;
 
@@ -1813,12 +1828,7 @@ namespace Pixcren
                 ChangeHotKey(MyAppConfig.HotKey, HOTKEY_ID1);
 
             }
-            //AppConfig config = LoadConfig(AppDir + "\\" + APP_CONFIG_FILE_NAME);
-            //if (config != null)
-            //{
-            //    MyAppConfig = config;
-            //    this.DataContext = MyAppConfig;
-            //}
+
         }
 
         //アプリの設定読み込み
@@ -2016,6 +2026,13 @@ namespace Pixcren
 
                     Clipboard.SetDataObject(data, true);//true必須
                     isSuccess = true;
+
+                    //コピーだけのときは連番に加算
+                    if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.Copy &&
+                        MyAppConfig.IsFileNameSerial)
+                    {
+                        AddIncrementToSerial();
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -2030,6 +2047,20 @@ namespace Pixcren
             if (isSuccess) PlayMySound();
 
             //プレビューウィンドウに表示
+            DisplayPreviewWindow(bitmap, fullPath, isSavedDone);
+
+            return isSuccess;
+        }
+
+        //
+        /// <summary>
+        /// プレビューウィンドウに表示
+        /// </summary>
+        /// <param name="bitmap"></param>
+        /// <param name="fullPath"></param>
+        /// <param name="isSavedDone">保存済みならtrue</param>
+        private bool DisplayPreviewWindow(BitmapSource bitmap, string fullPath, bool isSavedDone)
+        {
             if (MyPreviweWindow != null && bitmap != null)
             {
                 MyPreviewItems.Add(new PreviewItem(
@@ -2037,9 +2068,13 @@ namespace Pixcren
                 ListBox lb = MyPreviweWindow.MyListBox;
                 lb.SelectedIndex = MyPreviewItems.Count - 1;
                 lb.ScrollIntoView(lb.SelectedItem);
+                if (isSavedDone == false)
+                {
+                    AddIncrementToSerial();
+                }
+                return true;
             }
-
-            return isSuccess;
+            return false;
         }
 
         /// <summary>
@@ -2144,6 +2179,8 @@ namespace Pixcren
             //メタデータ作成、アプリ名記入
             BitmapMetadata meta = MakeMetadata();
             encoder.Frames.Add(BitmapFrame.Create(bitmap, null, meta, null));
+            //重複回避ファイルパス取得
+            fullPath = MakeFilePathAvoidDuplicate(fullPath);
             try
             {
                 using var fs = new System.IO.FileStream(
@@ -2182,12 +2219,26 @@ namespace Pixcren
 
             string dir = System.IO.Path.Combine(directory, fileName);
             string extension = "." + MyAppConfig.ImageType.ToString();
+            string fullPaht = dir + extension;
+            //重複回避パス取得
+            return MakeFilePathAvoidDuplicate(fullPaht);
+        }
 
-            while (System.IO.File.Exists(dir + extension))
+        /// <summary>
+        /// 重複回避ファイルパス作成、重複しなくなるまでファイル名末尾に_を追加して返す
+        /// </summary>
+        /// <returns></returns>
+        private string MakeFilePathAvoidDuplicate(string fullPath)
+        {
+            string extension = System.IO.Path.GetExtension(fullPath);
+            string name = System.IO.Path.GetFileNameWithoutExtension(fullPath);
+            string directory = System.IO.Path.GetDirectoryName(fullPath);
+            while (System.IO.File.Exists(fullPath))
             {
-                dir += "_";
+                name += "_";
+                fullPath = System.IO.Path.Combine(directory, name) + extension;
             }
-            return dir + extension;
+            return fullPath;
         }
 
         //メタデータ作成
@@ -2365,28 +2416,52 @@ namespace Pixcren
 
         private bool SaveBitmapFromClipboard()
         {
-            //前回の画像取得から一定時間以下のときは処理しない
-            MyStopwatch.Stop();
-            if (MyStopwatch.ElapsedMilliseconds < 100)
-            {
-                return false;
-            }
+            bool result = false;
+            //画像保存準備
+            (BitmapSource bitmap, string fullPath) = SaveBitmapPre();
 
+            if (bitmap != null && fullPath != null)
+            {
+                if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.AddPreviewWindow)
+                {
+                    //プレビューウィンドウに追加
+                    result = DisplayPreviewWindow(bitmap, fullPath, false);
+                }
+                if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAtClipboardChange)
+                {
+                    //保存
+                    result = SaveBitmap(bitmap, fullPath);
+                }
+            }
+            return result;
+        }
+
+        private (BitmapSource bitmap, string fullPath) SaveBitmapPre()
+        {
+            ////前回の画像取得から一定時間以下のときは処理しない
+            //MyStopwatch.Stop();
+            //if (MyStopwatch.ElapsedMilliseconds < 100)
+            //{
+            //    return (null, null);
+            //}
+
+            //画像取得
             BitmapSource source = GetImageFromClipboard();
             if (source == null)
             {
-                MyStopwatch.Restart();
-                return false;
+                //MyStopwatch.Restart();
+                return (null, null);
             }
 
+            //画像保存準備
             string fullPath = GetSaveFileFullPath();
             if (fullPath == string.Empty)
             {
-                MyStopwatch.Restart();
-                return false;
+                //MyStopwatch.Restart();
+                return (null, null);
             }
-            MyStopwatch.Restart();
-            return SaveBitmap(source, fullPath);
+            //MyStopwatch.Restart();
+            return (source, fullPath);
         }
 
         /// <summary>
@@ -2896,7 +2971,9 @@ namespace Pixcren
         private void SaveBehaviorChanged()
         {
             if (clipboardWatcher == null) return;
-            if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAtClipboardChange)
+            if (MyAppConfig.SaveBehaviorType is
+                SaveBehaviorType.SaveAtClipboardChange or
+                SaveBehaviorType.AddPreviewWindow)
             {
                 clipboardWatcher.Start();
             }
@@ -3160,7 +3237,8 @@ namespace Pixcren
         Save,
         Copy,
         SaveAndCopy,
-        SaveAtClipboardChange
+        SaveAtClipboardChange,
+        AddPreviewWindow
     }
 
 
