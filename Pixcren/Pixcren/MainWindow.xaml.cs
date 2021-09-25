@@ -435,6 +435,7 @@ namespace Pixcren
 
         //メニューウィンドウ付きでキャプチャ時に使用
         private const int LOOP_LIMIT = 16;
+        private const int LARGE_LOOP_LIMIT = 300;
 
         //プレビューウィンドウ
         internal PreviweWindow MyPreviweWindow;
@@ -604,13 +605,14 @@ namespace Pixcren
             ComboBoxSaveFileType.ItemsSource = Enum.GetValues(typeof(ImageType));
             MyComboBoxCaputureRect.ItemsSource = new Dictionary<CaptureRectType, string>
             {
-                { CaptureRectType.Screen, "全画面" },
+                { CaptureRectType.Screen, "画面全体" },
                 { CaptureRectType.Window, "ウィンドウ" },
                 { CaptureRectType.WindowClient, "ウィンドウのクライアント領域" },
                 { CaptureRectType.UnderCursor, "カーソル下のコントロール" },
                 { CaptureRectType.UnderCursorClient, "カーソル下コントロールのクライアント領域" },
-                { CaptureRectType.WindowWithMenu, "ウィンドウ特殊1(With枠外メニューウィンドウ)" },
-                { CaptureRectType.WindowWithRelatedWindow, "ウィンドウ特殊1+(With関連ウィンドウ)" }
+                { CaptureRectType.WindowWithMenu, "ウィンドウ + メニューウィンドウ" },
+                { CaptureRectType.WindowWithRelatedWindow, "ウィンドウ + 関連ウィンドウ" },
+                { CaptureRectType.WindowWithRelatedWindowPlus, "ウィンドウ + より多くの関連ウィンドウ" },
             };
 
 
@@ -618,17 +620,17 @@ namespace Pixcren
 
 
             MyComboBoxSoundType.ItemsSource = new Dictionary<MySoundPlay, string> {
-                { MySoundPlay.None, "鳴らさない"},
+                { MySoundPlay.None, "無音"},
                 { MySoundPlay.PlayDefault, "既定の音" },
                 { MySoundPlay.PlayOrder, "指定した音" }
             };
 
             MyComboBoxSaveBehavior.ItemsSource = new Dictionary<SaveBehaviorType, string> {
-                { SaveBehaviorType.Save, "保存：画像ファイルとして保存する" },
-                { SaveBehaviorType.Copy, "コピー：クリップボードにコピーする" },
-                { SaveBehaviorType.SaveAndCopy, "保存＋コピー" },
-                { SaveBehaviorType.SaveAtClipboardChange, "特殊：クリップボード更新されたら保存" },
-                { SaveBehaviorType.AddPreviewWindow, "特殊：クリップボード更新されたらプレビューウィンドウに追加" }
+                { SaveBehaviorType.Save, "画像ファイルとして保存する" },
+                { SaveBehaviorType.Copy, "クリップボードにコピーする (保存はしない)" },
+                { SaveBehaviorType.SaveAndCopy, "保存 + コピー" },
+                { SaveBehaviorType.SaveAtClipboardChange, "クリップボード監視、更新されたら保存" },
+                { SaveBehaviorType.AddPreviewWindow, "クリップボード監視、更新されたらプレビューウィンドウに追加 (保存はしない)" }
             };
         }
 
@@ -775,7 +777,7 @@ namespace Pixcren
 
                         break;
 
-                    case CaptureRectType.WindowWithRelatedWindow:
+                    case CaptureRectType.WindowWithRelatedWindow or CaptureRectType.WindowWithRelatedWindowPlus:
                         //メニューウィンドウに加えて、関連ウィンドウもまとめてキャプチャ
                         myRectList = GetRectListForeWindowWhitMenu(true)
                             .Select(
@@ -856,7 +858,7 @@ namespace Pixcren
 
         private List<Rect> GetRectListForeWindowWhitMenu(bool isRelatedParent)
         {
-            List<Rect> R = new();
+            List<Rect> rectList = new();
 
             var fore = GetWindowInfo(GetForegroundWindow());
             //カーソルしたウィンドウ
@@ -876,7 +878,6 @@ namespace Pixcren
             if (fore.Text == "")
             {
                 //下層から選別
-
                 MyWidndowInfo parent = GetWindowInfo(
                     GetParent(fore.hWnd));
                 MyWidndowInfo popup = GetWindowInfo(
@@ -900,27 +901,27 @@ namespace Pixcren
 
 
                 //見た目通りのRectを取得
-                R = next.Select(x => GetWindowRectMitame(x.hWnd)).ToList();
+                rectList = next.Select(x => GetWindowRectMitame(x.hWnd)).ToList();
 
                 //ForeNEXTを上から順番にRectを見て、width = 0が見つかったらそれ以降は除外
-                R = SelectNoneZeroRects(R);
+                rectList = SelectNoneZeroRects(rectList);
 
                 //popupウィンドウのRectを追加
                 if (popup.Rect.Width != 0)
                 {
-                    R.Add(GetWindowRectMitame(popup.hWnd));
+                    rectList.Add(GetWindowRectMitame(popup.hWnd));
                 }
 
 
                 //ParentのTextが""ならParentは無いので、代わりにRootOwnerのRectを追加
                 if (parent.Text == "")
                 {
-                    R.Add(GetWindowRectMitame(rootOwner.hWnd));
+                    rectList.Add(GetWindowRectMitame(rootOwner.hWnd));
                 }
                 //関連ウィンドウを集める場合は、parentをさかのぼって追加
                 else if (isRelatedParent)
                 {
-                    R.AddRange(
+                    rectList.AddRange(
                         GetOwnerWindowsInfo(parent.hWnd, LOOP_LIMIT)
                         .Select(x => GetWindowRectMitame(x.hWnd)));
                 }
@@ -928,31 +929,35 @@ namespace Pixcren
                 //ParentのTextがあればダイアログボックスウィンドウが最前面なので、そのRectを追加
                 else
                 {
-                    R.Add(GetWindowRectMitame(parent.hWnd));
+                    rectList.Add(GetWindowRectMitame(parent.hWnd));
                 }
             }
 
             //普通のアプリは、上下層から選別
             else
             {
+                //メニューのドロップダウンリストのRect収集
                 List<MyWidndowInfo> prev = GetWindowInfos(
                     GetCmdWindows(cursorWnd.hWnd, GETWINDOW_CMD.GW_HWNDPREV, LOOP_LIMIT));
+                prev = prev.Where(x => x.IsVisible).Where(x => x.Rect.Width > 0).ToList();//可視ウィンドウのみ
+
 
                 List<MyWidndowInfo> next = GetWindowInfos(
                     GetCmdWindows(cursorWnd.hWnd, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT));
+                next = next.Where(x => x.IsVisible).Where(x => x.Rect.Width > 0).ToList();
 
                 //Popup
                 MyWidndowInfo popup = GetWindowInfo(
                     GetWindow(fore.hWnd, GETWINDOW_CMD.GW_ENABLEDPOPUP));
 
-                R = SelectRects(prev).Union(SelectRects(next)).ToList();
+                rectList = SelectRects(prev).Union(SelectRects(next)).ToList();
 
                 //重なり判定はForegroundのRectと、それ以外のRectを結合したRectで判定する
                 //Rectの結合はGeometryGroupを使う
                 GeometryGroup gg = new();
-                for (int i = 0; i < R.Count; i++)
+                for (int i = 0; i < rectList.Count; i++)
                 {
-                    gg.Children.Add(new RectangleGeometry(R[i]));
+                    gg.Children.Add(new RectangleGeometry(rectList[i]));
                 }
 
                 //重なり判定
@@ -960,57 +965,83 @@ namespace Pixcren
                 //収集したRect全破棄
                 if (IsOverlapping(gg, new RectangleGeometry(fore.Rect)) == false)
                 {
-                    R = new();
+                    rectList = new();
                 }
+                //endメニューのドロップダウンリストのRect収集
+
 
                 //関連ウィンドウを収集、追加
                 if (isRelatedParent)
                 {
                     //foreのオーナーをさかのぼって収集
-                    R.AddRange(
+                    rectList.AddRange(
                         GetOwnerWindowsInfo(fore.hWnd, LOOP_LIMIT)
                         .Select(x => GetWindowRectMitame(x.hWnd)));
 
                     //Popupウィンドウの関連ウィンドウ
-                    List<MyWidndowInfo> popupの下層群 = GetWindowInfos(GetCmdWindows(popup.hWnd, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT));
-                    //オーナーがforeと同じなら関連とみなして追加
-                    foreach (var item in popupの下層群)
+                    if (fore.hWnd != popup.hWnd)
                     {
-                        var info = GetWindowInfo(GetWindow(item.hWnd, GETWINDOW_CMD.GW_OWNER));
-                        if (info.hWnd == fore.hWnd)
+                        List<MyWidndowInfo> popupの下層群 = GetWindowInfos(GetCmdWindows(popup.hWnd, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT));
+
+                        //オーナーがforeと同じなら関連とみなして追加
+                        foreach (var item in popupの下層群)
                         {
-                            R.Add(GetWindowRectMitame(item.hWnd));
+                            var info = GetWindowInfo(GetWindow(item.hWnd, GETWINDOW_CMD.GW_OWNER));
+                            if (info.hWnd == fore.hWnd && item.IsVisible)
+                            {
+                                rectList.Add(GetWindowRectMitame(item.hWnd));
+                            }
                         }
                     }
 
-                    ////foreと最上位オーナーが違う場合は、foreはサブウィンドウ
-                    ////このときはforeの下層ウィンドウ(サブウィンドウ群になる)を収集
-                    //var topOwner = GetTopOwnerWindowInfo(fore.hWnd);//最上位オーナーを取得
-                    //if (topOwner.hWnd != IntPtr.Zero && fore.hWnd != topOwner.hWnd)
-                    //{
-                    //    var subWindows = GetWindowInfos(GetCmdWindows(fore.hWnd, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT));
-                    //    foreach (var item in subWindows)
-                    //    {
-                    //        var info = GetWindowInfo(GetWindow(item.hWnd, GETWINDOW_CMD.GW_OWNER));
-                    //        if (info.hWnd == topOwner.hWnd)
-                    //        {
-                    //            R.Add(GetWindowRectMitame(item.hWnd));
-                    //        }
-                    //    }
-                    //}
+                    //  関連ウィンドウ(ツールウィンドウなど)のRect収集
+                    //foreの上層(PREV)ウィンドウ300枚から選別
+                    //条件は、サイズが0以上かつ、表示されているかつ、オーナーウィンドウがforeと同じ
+                    prev = GetWindowInfos(GetCmdWindows(fore.hWnd, GETWINDOW_CMD.GW_HWNDPREV, LARGE_LOOP_LIMIT));
+                    prev = prev.Where(x => x.IsVisible).Where(x => x.Rect.Width > 0).ToList();//可視ウィンドウ選別
+                    //オーナーウィンドウとforeが同じウィンドウのRect収集
+                    foreach (MyWidndowInfo item in prev)
+                    {
+                        if (fore.Text == GetTopOwnerWindowInfo(item.hWnd, LOOP_LIMIT).Text)
+                        {
+                            rectList.Add(GetWindowRectMitame(item.hWnd));
+                        }
+                    }
 
+                    //より多くの関連ウィンドウを取得する、かなり特殊なアプリ用
+                    if (MyAppConfig.RectType == CaptureRectType.WindowWithRelatedWindowPlus)
+                    {
+                        //Meryのプラグイン設定ウィンドウ→アウトラインウィンドウとか
+                        //aviutlで複数のツールウィンドウの一つがアクティブなときでもすべてのツールウィンドウをキャプチャしたいとき
+                        var topOwnerFore = GetTopOwnerWindowInfo(fore.hWnd, LOOP_LIMIT);
+                        if (topOwnerFore.Text != null && topOwnerFore.IsVisible)
+                        {
+                            next = GetWindowInfos(GetCmdWindows(fore.hWnd, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT));
+                            next = next.Where(x => x.IsVisible).Where(x => x.Rect.Width > 0).ToList();
+                            foreach (MyWidndowInfo item in next)
+                            {
+                                if (GetTopOwnerWindowInfo(item.hWnd, LOOP_LIMIT).Text == topOwnerFore.Text)
+                                {
+                                    rectList.Add(GetWindowRectMitame(item.hWnd));
+                                }
+                            }
+                        }
+                    }
                 }
                 else
                 {
                     //ForeのRectを追加
-                    R.Add(GetWindowRectMitame(fore.hWnd));
+                    rectList.Add(GetWindowRectMitame(fore.hWnd));
                 }
 
                 //PopupのRectを追加
-                if (popup.Rect.Width != 0) R.Add(GetWindowRectMitame(popup.hWnd));
+                if (popup.Text == "" && popup.Rect.Width != 0)
+                {
+                    rectList.Add(GetWindowRectMitame(popup.hWnd));
+                }
 
             }
-            return R;
+            return rectList;
         }
 
 
@@ -3166,6 +3197,7 @@ namespace Pixcren
         UnderCursorClient,
         WindowWithMenu,
         WindowWithRelatedWindow,
+        WindowWithRelatedWindowPlus,
 
     }
 
