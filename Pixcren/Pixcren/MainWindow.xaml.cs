@@ -1536,9 +1536,8 @@ namespace Pixcren
                 }
 
                 //処理
-                MyStopwatch.Restart();
                 SaveBitmapFromClipboard();
-
+                MyStopwatch.Restart();
 
             };
 
