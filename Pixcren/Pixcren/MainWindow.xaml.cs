@@ -512,8 +512,6 @@ namespace Pixcren
             //タイトルをアプリの名前 + バージョン
             this.Title = APP_NAME + AppVersion;
 
-            ////コンボボックス初期化、これは最期
-            //MyInisializeComboBox();
         }
 
         /// <summary>
@@ -630,7 +628,7 @@ namespace Pixcren
                 { SaveBehaviorType.Copy, "クリップボードにコピーする (保存はしない)" },
                 { SaveBehaviorType.SaveAndCopy, "保存 + コピー" },
                 { SaveBehaviorType.SaveAtClipboardChange, "クリップボード監視、更新されたら保存" },
-                { SaveBehaviorType.AddPreviewWindow, "クリップボード監視、更新されたらプレビューウィンドウに追加 (保存はしない)" }
+                { SaveBehaviorType.AddPreviewWindowFromClopboard, "クリップボード監視、更新されたらプレビューウィンドウに追加 (保存はしない)" }
             };
         }
 
@@ -804,7 +802,10 @@ namespace Pixcren
                 BitmapSource bitmap = MakeBitmapForSave(screen, myRectList);
 
                 //保存
-                _ = SaveBitmap(bitmap, fullPath);
+                if (SaveBitmap(bitmap, fullPath))
+                {
+                    PlayMySound();
+                }
 
 
             }
@@ -868,11 +869,6 @@ namespace Pixcren
             MyWidndowInfo rootOwner = GetWindowInfo(
                     GetAncestor(fore.hWnd, AncestorType.GA_ROOTOWNER));
 
-
-            //foreかカーソルしたのtextが""
-            //if (fore.Text == "" || cursorWnd.Text == "")
-            //fore.textが""か関連ウィンドウ含めるなら
-            //if (fore.Text == "" || isRelatedParent)
 
             //fore.textが""ならエクセル系アプリと判断            
             if (fore.Text == "")
@@ -1536,9 +1532,11 @@ namespace Pixcren
                 }
 
                 //処理
-                SaveBitmapFromClipboard();
+                if (SaveBitmapFromClipboard())
+                {
+                    PlayMySound();
+                }
                 MyStopwatch.Restart();
-
             };
 
 
@@ -2039,8 +2037,8 @@ namespace Pixcren
 
             //クリップボードにコピー、BMPとPNG形式の両方をセットする
             //BMPはアルファ値が255になる、PNGはアルファ値保持するけどそれが活かせるかは貼り付けるアプリに依る
-            if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.Copy ||
-                MyAppConfig.SaveBehaviorType == SaveBehaviorType.SaveAndCopy)
+            if (MyAppConfig.SaveBehaviorType is SaveBehaviorType.Copy or
+                SaveBehaviorType.SaveAndCopy)
             {
                 try
                 {
@@ -2073,8 +2071,6 @@ namespace Pixcren
                 }
             }
 
-            //音
-            if (isSuccess) PlayMySound();
 
             //プレビューウィンドウに表示
             DisplayPreviewWindow(bitmap, fullPath, isSavedDone);
@@ -2452,7 +2448,7 @@ namespace Pixcren
 
             if (bitmap != null && fullPath != null)
             {
-                if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.AddPreviewWindow)
+                if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.AddPreviewWindowFromClopboard)
                 {
                     //プレビューウィンドウに追加
                     result = DisplayPreviewWindow(bitmap, fullPath, false);
@@ -2609,8 +2605,9 @@ namespace Pixcren
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
+
             }
 
             return source;
@@ -2632,13 +2629,8 @@ namespace Pixcren
                 {
                     obj = Clipboard.GetDataObject();
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    //if (count == limit)
-                    //{
-                    //    string str = $"{ex.Message}\n" + $"{limit}回試行したけど" + $"クリップボードのデータの取得に失敗\n";
-                    //    MessageBox.Show(str);
-                    //}
                 }
                 finally
                 {
@@ -2981,6 +2973,11 @@ namespace Pixcren
         //プレビューウィンドウ
         private void MyMenuItemOpenPreviewWindow_Click(object sender, RoutedEventArgs e)
         {
+            ShowMyPreviewWindow();
+        }
+        //プレビューウィンドウを開く
+        private void ShowMyPreviewWindow()
+        {
             if (MyPreviweWindow == null)
             {
                 MyPreviewItems = new ObservableCollection<PreviewItem>();
@@ -2990,20 +2987,27 @@ namespace Pixcren
                 MyPreviweWindow.DataContext = MyPreviewItems;
             }
         }
-
         //キャプチャ時の挙動変更時
         private void MyComboBoxSaveBehavior_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             //クリップボード監視のON/OFF
             SaveBehaviorChanged();
+            //プレビューウィンドウを開く
+            if (MyAppConfig.SaveBehaviorType == SaveBehaviorType.AddPreviewWindowFromClopboard &&
+                MyPreviweWindow == null)
+            {
+                ShowMyPreviewWindow();
+            }
         }
+
+
         //クリップボード監視のON/OFF
         private void SaveBehaviorChanged()
         {
             if (clipboardWatcher == null) return;
             if (MyAppConfig.SaveBehaviorType is
                 SaveBehaviorType.SaveAtClipboardChange or
-                SaveBehaviorType.AddPreviewWindow)
+                SaveBehaviorType.AddPreviewWindowFromClopboard)
             {
                 clipboardWatcher.Start();
             }
@@ -3269,7 +3273,7 @@ namespace Pixcren
         Copy,
         SaveAndCopy,
         SaveAtClipboardChange,
-        AddPreviewWindow
+        AddPreviewWindowFromClopboard
     }
 
 
