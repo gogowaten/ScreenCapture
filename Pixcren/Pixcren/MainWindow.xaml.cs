@@ -1012,7 +1012,7 @@ namespace Pixcren
                         var topOwnerFore = GetTopOwnerWindowInfo(fore.hWnd, LOOP_LIMIT);
                         if (topOwnerFore.Text != null && topOwnerFore.IsVisible)
                         {
-                            next = GetWindowInfos(GetCmdWindows(fore.hWnd, GETWINDOW_CMD.GW_HWNDNEXT, LOOP_LIMIT));
+                            next = GetWindowInfos(GetCmdWindows(fore.hWnd, GETWINDOW_CMD.GW_HWNDNEXT, LARGE_LOOP_LIMIT));
                             next = next.Where(x => x.IsVisible).Where(x => x.Rect.Width > 0).ToList();
                             foreach (MyWidndowInfo item in next)
                             {
