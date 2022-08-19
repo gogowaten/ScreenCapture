@@ -2540,7 +2540,8 @@ namespace Pixcren
                 return source;
             }
             //アルファ値が異常な画像ならピクセルフォーマットをBgr32に変換(アルファ値を255にする)
-            if (IsExceptionTransparent(source))
+            if (IsExceptionTransparent2(source))
+            //if (IsExceptionTransparent(source))
             {
                 source = new FormatConvertedBitmap(source, PixelFormats.Bgr32, null, 0);
             }
@@ -2584,6 +2585,24 @@ namespace Pixcren
             {
                 return false;
             }
+        }
+        /// <summary>
+        /// 全数検査、アルファ値以上ならTrueを返す
+        /// Bgra32専用、それ以外はfalse(正常)を返す
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        private bool IsExceptionTransparent2(BitmapSource source)
+        {
+            if(source.Format != PixelFormats.Bgra32) return false;
+            int stride = source.PixelWidth * 4;
+            byte[] pixels = new byte[stride * source.PixelHeight];
+            source.CopyPixels(pixels, stride, 0);
+            for (int i = 3; i < pixels.Length; i += 4)
+            {
+                if (pixels[i] > 0) return false;
+            }
+            return true;
         }
 
 
