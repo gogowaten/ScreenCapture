@@ -2552,40 +2552,40 @@ namespace Pixcren
 
 
 
-        /// <summary>
-        /// ファルファ値が0になっているか判定、0(異常な画像)ならTrueを返す
-        /// </summary>
-        /// <param name="source"></param>
-        /// <returns></returns>
-        private bool IsExceptionTransparent(BitmapSource source)
-        {
-            //全部0なら正常判定、ファルファ0でRGBいずれかが0より大きいのは異常
-            //正常判定：全部0 or alpha>0
-            //異常判定：α0でRGBのどれかが1以上
-            //画像の左上の1ピクセルで判定する
-            Int32Rect rect = new(0, 0, 1, 1);
-            BitmapSource crop;
-            if (source.Format != PixelFormats.Bgra32)
-            {
-                crop = new CroppedBitmap(new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0), rect);
-            }
-            else
-            {
-                crop = new CroppedBitmap(source, new Int32Rect(0, 0, 1, 1));
-            }
-            byte[] pixels = new byte[4];
-            crop.CopyPixels(pixels, 4, 0);
+        ///// <summary>
+        ///// ファルファ値が0になっているか判定、0(異常な画像)ならTrueを返す
+        ///// </summary>
+        ///// <param name="source"></param>
+        ///// <returns></returns>
+        //private bool IsExceptionTransparent(BitmapSource source)
+        //{
+        //    //全部0なら正常判定、ファルファ0でRGBいずれかが0より大きいのは異常
+        //    //正常判定：全部0 or alpha>0
+        //    //異常判定：α0でRGBのどれかが1以上
+        //    //画像の左上の1ピクセルで判定する
+        //    Int32Rect rect = new(0, 0, 1, 1);
+        //    BitmapSource crop;
+        //    if (source.Format != PixelFormats.Bgra32)
+        //    {
+        //        crop = new CroppedBitmap(new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0), rect);
+        //    }
+        //    else
+        //    {
+        //        crop = new CroppedBitmap(source, new Int32Rect(0, 0, 1, 1));
+        //    }
+        //    byte[] pixels = new byte[4];
+        //    crop.CopyPixels(pixels, 4, 0);
 
-            int rgb = pixels[0] + pixels[1] + pixels[2];
-            if (pixels[3] == 0 && rgb > 0)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
+        //    int rgb = pixels[0] + pixels[1] + pixels[2];
+        //    if (pixels[3] == 0 && rgb > 0)
+        //    {
+        //        return true;
+        //    }
+        //    else
+        //    {
+        //        return false;
+        //    }
+        //}
         /// <summary>
         /// 全数検査、アルファ値以上ならTrueを返す
         /// Bgra32専用、それ以外はfalse(正常)を返す
